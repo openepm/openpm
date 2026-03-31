@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import atexit
 import os
+import subprocess
+import sys
 import time
+from contextlib import suppress
+from pathlib import Path
+from urllib.parse import urlparse
 from statistics import mean
 from typing import Dict, List
 
@@ -18,6 +24,84 @@ API_BASE_URL = os.getenv("API_BASE_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")
 HF_TOKEN = os.getenv("HF_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+_SERVER_PROCESS: subprocess.Popen | None = None
+
+
+def _is_local_base_url(base_url: str) -> bool:
+    parsed = urlparse(base_url)
+    host = parsed.hostname or ""
+    return host in {"localhost", "127.0.0.1"}
+
+
+def _try_reset_probe(base_url: str) -> bool:
+    try:
+        with OpenPMEnv(base_url=base_url).sync() as probe_env:
+            probe_env.reset(task_id="easy")
+        return True
+    except Exception:
+        return False
+
+
+def _stop_local_server() -> None:
+    global _SERVER_PROCESS
+    if _SERVER_PROCESS is None:
+        return
+
+    with suppress(Exception):
+        _SERVER_PROCESS.terminate()
+        _SERVER_PROCESS.wait(timeout=5)
+    with suppress(Exception):
+        if _SERVER_PROCESS.poll() is None:
+            _SERVER_PROCESS.kill()
+    _SERVER_PROCESS = None
+
+
+def _ensure_server_ready(base_url: str) -> None:
+    global _SERVER_PROCESS
+
+    if _try_reset_probe(base_url):
+        return
+
+    if not _is_local_base_url(base_url):
+        raise RuntimeError(
+            f"Unable to connect to running OpenPM server at {base_url}. "
+            "Start the server manually or set OPENPM_BASE_URL to a reachable endpoint."
+        )
+
+    script_root = Path(__file__).resolve().parent
+    parsed = urlparse(base_url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 8000
+
+    _SERVER_PROCESS = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "server.app:app",
+            "--host",
+            host,
+            "--port",
+            str(port),
+        ],
+        cwd=str(script_root),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    atexit.register(_stop_local_server)
+
+    deadline = time.time() + 20
+    while time.time() < deadline:
+        if _try_reset_probe(base_url):
+            return
+        time.sleep(0.5)
+
+    _stop_local_server()
+    raise RuntimeError(
+        f"OpenPM server failed to start at {base_url} within 20 seconds. "
+        "Check dependencies and run `uv run server` manually to inspect logs."
+    )
 
 
 def _pick_rule_action(observation) -> PMAction:
@@ -159,6 +243,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
 
 def main() -> None:
     base_url = os.getenv("OPENPM_BASE_URL", "http://localhost:8000")
+    _ensure_server_ready(base_url)
     results: Dict[str, Dict[str, float]] = {}
 
     for task_id in TASKS:
