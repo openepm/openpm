@@ -11,110 +11,190 @@ tags:
   - openenv
 ---
 
-OpenPM: Project Management RL Environment
+# OpenPM: Project Management RL Environment
 
-OpenPM simulates a realistic software sprint where an agent acts as a project manager and makes scheduling and delivery decisions. The environment is deterministic and designed for robust evaluation.
+OpenPM is a deterministic, real-world OpenEnv environment that simulates a software sprint. An agent plays the role of a project manager and must deliver work under constraints: dependencies, blockers, deadlines, developer availability, and skill fit.
 
-Real-world objective
+This environment is designed for evaluation first: reproducible transitions, typed interfaces, automated graders, and clear reward shaping.
 
-- Deliver a sprint by managing tasks, dependencies, blockers, and developer capacity under deadlines.
+## What This Project Is
 
-OpenEnv compliance
+OpenPM models a sprint as a decision process where each step is one management action.
 
-- step(action)
-- reset(task_id=easy|medium|hard)
-- state()
-- Typed models for action, observation, state
-- openenv.yaml included
+Goal:
 
-Action space
+- Maximize sprint completion quality while minimizing delays, invalid actions, and avoidable risk.
 
-- assign_task(task_id, developer_id)
-- reprioritize_task(task_id, priority)
-- split_task(task_id)
-- request_help(task_id)
-- delay_task(task_id)
-- mark_complete(task_id)
+Why it is realistic:
 
-Action schema (PMAction)
+- Task dependencies can block execution.
+- Developers have domain-specific skill levels.
+- Prioritization and assignment decisions directly affect throughput.
+- Hard mode introduces dynamic blockers and deadline pressure.
 
-| Field        | Type | Required    | Notes                                                                                       |
-| ------------ | ---- | ----------- | ------------------------------------------------------------------------------------------- |
-| action_type  | str  | yes         | One of: assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete |
-| task_id      | str  | conditional | Required for all task-specific actions                                                      |
-| developer_id | str  | conditional | Required for assign_task                                                                    |
-| priority     | str  | conditional | Required for reprioritize_task; one of low, medium, high, critical                          |
+## OpenEnv Compliance
 
-State and observation include
+The environment follows OpenEnv requirements:
 
-- active tasks with status, effort, dependencies, deadline
-- developer availability and skill profile
-- blocked tasks
-- sprint progress, risk level, time remaining
+- `reset(task_id=...)`
+- `step(action)`
+- `state()`
+- Typed Pydantic models for Action, Observation, and State
+- `openenv.yaml` manifest for validation/deployment
 
-Observation schema (PMObservation)
+## Environment Lifecycle
 
-| Field                  | Type                        | Notes                                                                       |
-| ---------------------- | --------------------------- | --------------------------------------------------------------------------- |
-| day                    | int                         | Current sprint day                                                          |
-| total_days             | int                         | Sprint horizon for active task                                              |
-| active_tasks           | list[TaskSnapshot]          | Per-task status, assignment, priority, dependencies, due day, blocker flags |
-| task_priorities        | dict[str, str]              | Current priority by task_id                                                 |
-| deadlines              | dict[str, int]              | Due day by task_id                                                          |
-| developer_availability | dict[str, bool]             | Availability state per developer                                            |
-| developer_skill_levels | dict[str, dict[str, float]] | Skill matrix by developer and domain                                        |
-| blocked_tasks          | list[str]                   | Task IDs currently blocked                                                  |
-| sprint_progress        | float                       | Fraction of total effort completed                                          |
-| risk_level             | float                       | Normalized project risk estimate                                            |
-| time_remaining         | int                         | Remaining days in sprint                                                    |
+1. Call `reset(task_id="easy" | "medium" | "hard")` to start a deterministic scenario.
+2. Call `step(action)` repeatedly.
+3. Read reward and done flag after each step.
+4. Call `state()` to inspect full episode state and metadata.
+5. Episode ends on completion or horizon exhaustion.
 
-Tasks and graders
+## Action Space
 
-- easy: small sprint with clear priorities
-- medium: dependency-heavy sprint with limited developers
-- hard: dynamic blocker injections and deadline pressure
-- deterministic grader scores in [0.0, 1.0]
+- `assign_task(task_id, developer_id)`
+- `reprioritize_task(task_id, priority)`
+- `split_task(task_id)`
+- `request_help(task_id)`
+- `delay_task(task_id)`
+- `mark_complete(task_id)`
 
-Reward logic
+### Action Schema (`PMAction`)
 
-- positive for progress, good prioritization, and blocker resolution
-- penalties for invalid actions, idle developers, and overdue work
-- terminal bonus for successful sprint completion
+| Field          | Type  | Required    | Notes                                                                                                  |
+| -------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `action_type`  | `str` | yes         | One of `assign_task`, `reprioritize_task`, `split_task`, `request_help`, `delay_task`, `mark_complete` |
+| `task_id`      | `str` | conditional | Required for task-specific actions                                                                     |
+| `developer_id` | `str` | conditional | Required for `assign_task`                                                                             |
+| `priority`     | `str` | conditional | Required for `reprioritize_task`; one of `low`, `medium`, `high`, `critical`                           |
 
-Quick start
+## Observation and State
 
-1. Install dependencies
-   uv sync
-2. Run server
-   uv run server
-3. Run baseline inference
-   python inference.py
+Each step returns a rich observation with sprint progress, risks, and task/developer status.
 
-Inference robustness
+### Observation Schema (`PMObservation`)
 
-- `inference.py` first tries to connect to `OPENPM_BASE_URL` (default `http://localhost:8000`).
-- If unreachable and base URL is local (`localhost`/`127.0.0.1`), it auto-starts `uvicorn` and retries.
-- For remote endpoints, it fails fast with a clear error message.
+| Field                    | Type                          | Notes                                                             |
+| ------------------------ | ----------------------------- | ----------------------------------------------------------------- |
+| `day`                    | `int`                         | Current sprint day                                                |
+| `total_days`             | `int`                         | Sprint horizon for active scenario                                |
+| `active_tasks`           | `list[TaskSnapshot]`          | Per-task status, assignment, effort, deps, due day, blocker flags |
+| `task_priorities`        | `dict[str, str]`              | Priority map by task id                                           |
+| `deadlines`              | `dict[str, int]`              | Due-day map by task id                                            |
+| `developer_availability` | `dict[str, bool]`             | Availability by developer                                         |
+| `developer_skill_levels` | `dict[str, dict[str, float]]` | Skill matrix by developer/domain                                  |
+| `blocked_tasks`          | `list[str]`                   | Currently blocked task ids                                        |
+| `sprint_progress`        | `float`                       | Fraction of total effort completed                                |
+| `risk_level`             | `float`                       | Normalized sprint risk estimate                                   |
+| `time_remaining`         | `int`                         | Remaining days in sprint                                          |
 
-Optional OpenAI baseline path
+## Reward Design
 
-- Set OPENPM_USE_OPENAI=1
-- Set API_BASE_URL
-- Set MODEL_NAME
-- Set HF_TOKEN or OPENAI_API_KEY
+Reward includes partial progress signals across the whole trajectory:
 
-Validation and deployment
+- Positive signals for progress and high-quality decisions.
+- Penalties for invalid actions, idle capacity, and overdue work.
+- Terminal bonus for successful delivery.
 
-1. Validate
-   openenv validate
-2. Build Docker
-   docker build -t openpm-env:latest .
-3. Push
-   openenv push --repo-id <username>/openpm-env
+## Tasks and Graders
 
-Baseline results (reference run)
+OpenPM provides three deterministic tasks with graders returning scores in `[0.0, 1.0]`:
 
-The deterministic rule-based baseline produces reproducible non-flat scores across all required tasks.
+- `easy`: small sprint, clear priorities
+- `medium`: dependency-heavy sprint with constrained developers
+- `hard`: dynamic blocker injections with tight deadlines
+
+## Quick Start (Local)
+
+```bash
+uv sync
+uv run server
+```
+
+In another terminal:
+
+```bash
+python inference.py
+```
+
+## Use from Python
+
+### Connect to deployed Space
+
+```python
+from openpm_env import OpenPMEnv, PMAction
+
+with OpenPMEnv.from_env("divyanshjha/openpm").sync() as env:
+    result = env.reset(task_id="easy")
+    result = env.step(PMAction(action_type="assign_task", task_id="T1", developer_id="D1"))
+    print(result.reward, result.done)
+```
+
+### Connect to local server directly
+
+```python
+from openpm_env import OpenPMEnv, PMAction
+
+with OpenPMEnv(base_url="http://localhost:8000").sync() as env:
+    env.reset(task_id="easy")
+    env.step(PMAction(action_type="assign_task", task_id="T1", developer_id="D1"))
+```
+
+## Test on Hugging Face Frontend
+
+Open the Space app and use the Playground form:
+
+1. Click `Reset`.
+2. Select `Action Type` = `assign_task`.
+3. Enter `Task Id` = `T1`.
+4. Enter `Developer Id` = `D1`.
+5. Click `Step`.
+6. Click `Get state` to verify state transition.
+
+Tip:
+
+- If you see a validation error, verify required fields for the selected action are provided.
+
+## Test via API (curl)
+
+Use the Space subdomain endpoint:
+
+```bash
+curl -X POST "https://divyanshjha-openpm.hf.space/reset" -H "Content-Type: application/json" -d "{}"
+curl -X GET "https://divyanshjha-openpm.hf.space/state"
+curl -X POST "https://divyanshjha-openpm.hf.space/step" -H "Content-Type: application/json" -d '{"action":{"action_type":"assign_task","task_id":"T1","developer_id":"D1"}}'
+```
+
+Important:
+
+- `/step` expects payload shape `{"action": { ... }}`. Sending raw action fields at top level returns HTTP 422.
+
+## Inference Modes
+
+Default mode is deterministic rule-based baseline.
+
+Optional OpenAI mode:
+
+- `OPENPM_USE_OPENAI=1`
+- `API_BASE_URL=<llm-endpoint>`
+- `MODEL_NAME=<model-id>`
+- `HF_TOKEN` or `OPENAI_API_KEY`
+
+Robustness behavior:
+
+- `inference.py` first tries `OPENPM_BASE_URL` (default `http://localhost:8000`).
+- If endpoint is local and unavailable, it auto-starts local uvicorn and retries.
+- For unreachable remote endpoints, it fails fast with a clear error.
+
+## Validation and Deployment
+
+```bash
+openenv validate
+docker build -t openpm-env:latest .
+openenv push --repo-id divyanshjha/openpm
+```
+
+## Baseline Results (Reference)
 
 | Task      | Score  |
 | --------- | ------ |
@@ -123,9 +203,43 @@ The deterministic rule-based baseline produces reproducible non-flat scores acro
 | hard      | 0.4161 |
 | aggregate | 0.5552 |
 
-Reference runtime: approximately 6-10 seconds on a local dev machine, well within the 20-minute submission constraint.
+Typical runtime:
 
-Expected infra envelope
+- ~6-15 seconds in standard runs, far below the 20-minute constraint.
 
-- inference runtime target: under 20 minutes
-- machine target: 2 vCPU, 8 GB RAM
+Target infra envelope:
+
+- 2 vCPU
+- 8 GB RAM
+
+## Troubleshooting
+
+### HTTP 422 on `/step`
+
+Cause:
+
+- Wrong JSON body shape.
+
+Fix:
+
+- Send `{"action": {...}}` wrapper, not flat fields.
+
+### Space is up but command fails
+
+Cause:
+
+- Using Hugging Face repository URL instead of Space subdomain API URL.
+
+Fix:
+
+- Use `https://<owner>-<space>.hf.space` for API calls.
+
+### OpenEnv push complains about missing `__init__.py`
+
+Cause:
+
+- Running push from wrong directory layout.
+
+Fix:
+
+- Run from project root and keep package/init files present.
