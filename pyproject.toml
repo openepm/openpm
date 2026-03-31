@@ -24,11 +24,11 @@ dev = [
 ]
 
 [project.scripts]
-server = "openpm_env.server.app:main"
+server = "server.app:main"
 
 [tool.setuptools]
 include-package-data = true
-packages = ["openpm_env", "openpm_env.server", "openpm_env.tasks"]
+packages = ["openpm_env", "openpm_env.server", "openpm_env.tasks", "server"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
