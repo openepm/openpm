@@ -13,44 +13,92 @@ tags:
 
 # OpenPM: Project Management RL Environment
 
-OpenPM is a deterministic, real-world OpenEnv environment that simulates a software sprint. An agent plays the role of a project manager and must deliver work under constraints: dependencies, blockers, deadlines, developer availability, and skill fit.
+<p align="center">
+  <img src="https://img.shields.io/badge/OpenEnv-Project%20Management-0ea5e9?style=for-the-badge" alt="OpenEnv Project Management" />
+  <img src="https://img.shields.io/badge/Hugging%20Face-Space-22c55e?style=for-the-badge" alt="Hugging Face Space" />
+  <img src="https://img.shields.io/badge/Deterministic-Yes-f59e0b?style=for-the-badge" alt="Deterministic" />
+</p>
 
-This environment is designed for evaluation first: reproducible transitions, typed interfaces, automated graders, and clear reward shaping.
+<p align="center">
+  <a href="https://huggingface.co/spaces/divyanshjha/openpm"><img src="https://img.shields.io/badge/Open%20Live%20Space-111827?style=for-the-badge&logo=huggingface&logoColor=FFD21E" alt="Open Live Space" /></a>
+  <a href="https://divyanshjha-openpm.hf.space/web/"><img src="https://img.shields.io/badge/Open%20Playground-1d4ed8?style=for-the-badge" alt="Open Playground" /></a>
+  <a href="https://github.com/openepm/openpm"><img src="https://img.shields.io/badge/Open%20GitHub-0f172a?style=for-the-badge&logo=github" alt="Open GitHub" /></a>
+</p>
 
-## What This Project Is
+OpenPM is a deterministic, real-world OpenEnv environment that simulates software sprint execution. The agent acts as a project manager and must make decisions under dependencies, blockers, deadlines, skill constraints, and limited developer availability.
 
-OpenPM models a sprint as a decision process where each step is one management action.
+## Why This Exists
 
-Goal:
+Most benchmark environments focus on games or synthetic puzzles. OpenPM focuses on enterprise-style delivery outcomes:
 
-- Maximize sprint completion quality while minimizing delays, invalid actions, and avoidable risk.
+- Dependency-aware planning
+- Team allocation under skill constraints
+- Risk management under deadline pressure
+- Deterministic, reproducible scoring for fair evaluation
 
-Why it is realistic:
+## What The Frontmatter At The Top Means
 
-- Task dependencies can block execution.
-- Developers have domain-specific skill levels.
-- Prioritization and assignment decisions directly affect throughput.
-- Hard mode introduces dynamic blockers and deadline pressure.
+The YAML block at the top of this README is required by Hugging Face Spaces.
 
-## OpenEnv Compliance
+- `title`, `emoji`, `colorFrom`, `colorTo`: card presentation metadata
+- `sdk: docker`: run this Space from Docker
+- `app_port: 8000`: internal service port
+- `base_path: /web`: web interface base route
+- `tags`: Space discoverability metadata
 
-The environment follows OpenEnv requirements:
+It is expected and should stay in the README for Space configuration.
+
+## Quick Navigation
+
+- [Project Overview](#project-overview)
+- [OpenEnv API Contract](#openenv-api-contract)
+- [Action and Observation Schemas](#action-and-observation-schemas)
+- [Reward and Grading](#reward-and-grading)
+- [Run Locally](#run-locally)
+- [Use on Hugging Face](#use-on-hugging-face)
+- [API Testing with curl](#api-testing-with-curl)
+- [Python Client Usage](#python-client-usage)
+- [Validation and Deployment](#validation-and-deployment)
+- [Baseline Results](#baseline-results)
+- [Troubleshooting](#troubleshooting)
+
+## Project Overview
+
+OpenPM models one sprint as one episode. Each step corresponds to one PM decision. The objective is to maximize delivery quality while minimizing avoidable risk, delays, and invalid actions.
+
+### Realism Elements
+
+- Task dependency constraints
+- Skill-aware developer assignment
+- Blocker handling and escalation
+- Priority management and deadline pressure
+- Dynamic blockers in hard mode
+
+### Task Set
+
+- `easy`: small sprint with clear priorities
+- `medium`: dependency-heavy sprint with constrained staff
+- `hard`: dynamic blockers and tight timeline
+
+## OpenEnv API Contract
+
+This environment follows standard OpenEnv interfaces:
 
 - `reset(task_id=...)`
 - `step(action)`
 - `state()`
-- Typed Pydantic models for Action, Observation, and State
-- `openenv.yaml` manifest for validation/deployment
 
-## Environment Lifecycle
+Episode flow:
 
-1. Call `reset(task_id="easy" | "medium" | "hard")` to start a deterministic scenario.
-2. Call `step(action)` repeatedly.
-3. Read reward and done flag after each step.
-4. Call `state()` to inspect full episode state and metadata.
-5. Episode ends on completion or horizon exhaustion.
+1. `reset(task_id="easy" | "medium" | "hard")`
+2. Repeated `step(...)`
+3. Inspect reward and done flag
+4. Query `state()` for full metadata
+5. Episode ends on completion or time horizon exhaustion
 
-## Action Space
+## Action and Observation Schemas
+
+### Supported Actions
 
 - `assign_task(task_id, developer_id)`
 - `reprioritize_task(task_id, priority)`
@@ -64,60 +112,89 @@ The environment follows OpenEnv requirements:
 | Field          | Type  | Required    | Notes                                                                                                  |
 | -------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------ |
 | `action_type`  | `str` | yes         | One of `assign_task`, `reprioritize_task`, `split_task`, `request_help`, `delay_task`, `mark_complete` |
-| `task_id`      | `str` | conditional | Required for task-specific actions                                                                     |
+| `task_id`      | `str` | conditional | Required for task-targeted actions                                                                     |
 | `developer_id` | `str` | conditional | Required for `assign_task`                                                                             |
 | `priority`     | `str` | conditional | Required for `reprioritize_task`; one of `low`, `medium`, `high`, `critical`                           |
 
-## Observation and State
-
-Each step returns a rich observation with sprint progress, risks, and task/developer status.
-
 ### Observation Schema (`PMObservation`)
 
-| Field                    | Type                          | Notes                                                             |
-| ------------------------ | ----------------------------- | ----------------------------------------------------------------- |
-| `day`                    | `int`                         | Current sprint day                                                |
-| `total_days`             | `int`                         | Sprint horizon for active scenario                                |
-| `active_tasks`           | `list[TaskSnapshot]`          | Per-task status, assignment, effort, deps, due day, blocker flags |
-| `task_priorities`        | `dict[str, str]`              | Priority map by task id                                           |
-| `deadlines`              | `dict[str, int]`              | Due-day map by task id                                            |
-| `developer_availability` | `dict[str, bool]`             | Availability by developer                                         |
-| `developer_skill_levels` | `dict[str, dict[str, float]]` | Skill matrix by developer/domain                                  |
-| `blocked_tasks`          | `list[str]`                   | Currently blocked task ids                                        |
-| `sprint_progress`        | `float`                       | Fraction of total effort completed                                |
-| `risk_level`             | `float`                       | Normalized sprint risk estimate                                   |
-| `time_remaining`         | `int`                         | Remaining days in sprint                                          |
+| Field                    | Type                          | Meaning                                                       |
+| ------------------------ | ----------------------------- | ------------------------------------------------------------- |
+| `day`                    | `int`                         | Current sprint day                                            |
+| `total_days`             | `int`                         | Sprint horizon                                                |
+| `active_tasks`           | `list[TaskSnapshot]`          | Task status, assignment, effort, deps, due day, blocker flags |
+| `task_priorities`        | `dict[str, str]`              | Priority by task id                                           |
+| `deadlines`              | `dict[str, int]`              | Due day by task id                                            |
+| `developer_availability` | `dict[str, bool]`             | Availability by developer                                     |
+| `developer_skill_levels` | `dict[str, dict[str, float]]` | Skill matrix by developer/domain                              |
+| `blocked_tasks`          | `list[str]`                   | Currently blocked task ids                                    |
+| `sprint_progress`        | `float`                       | Fraction of effort completed                                  |
+| `risk_level`             | `float`                       | Normalized risk estimate                                      |
+| `time_remaining`         | `int`                         | Remaining days                                                |
 
-## Reward Design
+## Reward and Grading
 
-Reward includes partial progress signals across the whole trajectory:
+Reward provides partial trajectory signal, not only terminal outcomes.
 
-- Positive signals for progress and high-quality decisions.
-- Penalties for invalid actions, idle capacity, and overdue work.
-- Terminal bonus for successful delivery.
+- Positive: progress, healthy prioritization, blocker resolution
+- Negative: invalid actions, idle time, overdue work
+- Terminal bonus: successful sprint completion
 
-## Tasks and Graders
+Grading:
 
-OpenPM provides three deterministic tasks with graders returning scores in `[0.0, 1.0]`:
+- Three deterministic graders (`easy`, `medium`, `hard`)
+- Score range strictly bounded to `[0.0, 1.0]`
 
-- `easy`: small sprint, clear priorities
-- `medium`: dependency-heavy sprint with constrained developers
-- `hard`: dynamic blocker injections with tight deadlines
-
-## Quick Start (Local)
+## Run Locally
 
 ```bash
 uv sync
 uv run server
 ```
 
-In another terminal:
+In a second terminal:
 
 ```bash
 python inference.py
 ```
 
-## Use from Python
+## Use on Hugging Face
+
+### Frontend Playground (No Code)
+
+Open the Space and use the UI controls:
+
+1. Click `Reset`
+2. Select `Action Type = assign_task`
+3. Enter `Task Id = T1`
+4. Enter `Developer Id = D1`
+5. Click `Step`
+6. Click `Get state`
+
+Playground URL:
+
+- `https://divyanshjha-openpm.hf.space/web/`
+
+### Space Home
+
+- `https://huggingface.co/spaces/divyanshjha/openpm`
+
+## API Testing with curl
+
+Use the Space subdomain endpoint for API calls.
+
+```bash
+curl -X POST "https://divyanshjha-openpm.hf.space/reset" -H "Content-Type: application/json" -d "{}"
+curl -X GET "https://divyanshjha-openpm.hf.space/state"
+curl -X POST "https://divyanshjha-openpm.hf.space/step" -H "Content-Type: application/json" -d '{"action":{"action_type":"assign_task","task_id":"T1","developer_id":"D1"}}'
+```
+
+Important:
+
+- `/step` expects payload shape `{"action": {...}}`
+- Sending flat action fields returns HTTP 422
+
+## Python Client Usage
 
 ### Connect to deployed Space
 
@@ -130,7 +207,7 @@ with OpenPMEnv.from_env("divyanshjha/openpm").sync() as env:
     print(result.reward, result.done)
 ```
 
-### Connect to local server directly
+### Connect to local server
 
 ```python
 from openpm_env import OpenPMEnv, PMAction
@@ -140,38 +217,9 @@ with OpenPMEnv(base_url="http://localhost:8000").sync() as env:
     env.step(PMAction(action_type="assign_task", task_id="T1", developer_id="D1"))
 ```
 
-## Test on Hugging Face Frontend
-
-Open the Space app and use the Playground form:
-
-1. Click `Reset`.
-2. Select `Action Type` = `assign_task`.
-3. Enter `Task Id` = `T1`.
-4. Enter `Developer Id` = `D1`.
-5. Click `Step`.
-6. Click `Get state` to verify state transition.
-
-Tip:
-
-- If you see a validation error, verify required fields for the selected action are provided.
-
-## Test via API (curl)
-
-Use the Space subdomain endpoint:
-
-```bash
-curl -X POST "https://divyanshjha-openpm.hf.space/reset" -H "Content-Type: application/json" -d "{}"
-curl -X GET "https://divyanshjha-openpm.hf.space/state"
-curl -X POST "https://divyanshjha-openpm.hf.space/step" -H "Content-Type: application/json" -d '{"action":{"action_type":"assign_task","task_id":"T1","developer_id":"D1"}}'
-```
-
-Important:
-
-- `/step` expects payload shape `{"action": { ... }}`. Sending raw action fields at top level returns HTTP 422.
-
 ## Inference Modes
 
-Default mode is deterministic rule-based baseline.
+Default is deterministic rule-based policy.
 
 Optional OpenAI mode:
 
@@ -182,9 +230,9 @@ Optional OpenAI mode:
 
 Robustness behavior:
 
-- `inference.py` first tries `OPENPM_BASE_URL` (default `http://localhost:8000`).
-- If endpoint is local and unavailable, it auto-starts local uvicorn and retries.
-- For unreachable remote endpoints, it fails fast with a clear error.
+- `inference.py` first checks `OPENPM_BASE_URL` (default `http://localhost:8000`)
+- For missing local server, it auto-starts uvicorn and retries
+- For unreachable remote URLs, it fails fast with a clear error
 
 ## Validation and Deployment
 
@@ -194,7 +242,7 @@ docker build -t openpm-env:latest .
 openenv push --repo-id divyanshjha/openpm
 ```
 
-## Baseline Results (Reference)
+## Baseline Results
 
 | Task      | Score  |
 | --------- | ------ |
@@ -203,9 +251,7 @@ openenv push --repo-id divyanshjha/openpm
 | hard      | 0.4161 |
 | aggregate | 0.5552 |
 
-Typical runtime:
-
-- ~6-15 seconds in standard runs, far below the 20-minute constraint.
+Typical runtime: ~6-15 seconds (well below 20-minute limit).
 
 Target infra envelope:
 
@@ -222,24 +268,24 @@ Cause:
 
 Fix:
 
-- Send `{"action": {...}}` wrapper, not flat fields.
+- Send `{"action": {...}}` wrapper.
 
-### Space is up but command fails
-
-Cause:
-
-- Using Hugging Face repository URL instead of Space subdomain API URL.
-
-Fix:
-
-- Use `https://<owner>-<space>.hf.space` for API calls.
-
-### OpenEnv push complains about missing `__init__.py`
+### Commands fail but Space UI works
 
 Cause:
 
-- Running push from wrong directory layout.
+- Using `huggingface.co/spaces/...` URL for API.
 
 Fix:
 
-- Run from project root and keep package/init files present.
+- Use `https://divyanshjha-openpm.hf.space` endpoints.
+
+### `openenv push` complains about missing `__init__.py`
+
+Cause:
+
+- Wrong working directory or incomplete project root structure.
+
+Fix:
+
+- Run from project root and keep package init files present.
