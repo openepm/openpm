@@ -27,6 +27,7 @@ python -c "from huggingface_hub import login; login(token='YOUR_NEW_TOKEN_HERE',
 **Replace `YOUR_NEW_TOKEN_HERE`** with your actual token.
 
 Expected output:
+
 ```
 ✓ HF authentication successful
 ```
@@ -46,6 +47,7 @@ openenv push --repo-id your-username/openpm
 **Replace `your-username`** with your actual HF username.
 
 ### What happens:
+
 1. OpenEnv CLI creates a new Space repository on HF
 2. Uploads your entire project code
 3. Triggers Docker build on HF infrastructure
@@ -53,6 +55,7 @@ openenv push --repo-id your-username/openpm
 5. Provides you with a public Space URL
 
 ### Expected output:
+
 ```
 ✓ Space created: https://huggingface.co/spaces/your-username/openpm
 ✓ Repository pushed successfully
@@ -70,11 +73,13 @@ Keep this URL safe — you'll submit it to the hackathon platform.
 3. Wait for status to change from **BUILDING** → **RUNNING**
 
 ### If build fails:
+
 - Check logs for errors (usually dependency or Docker syntax issues)
 - Fix locally: `docker build -f Dockerfile .`
 - Push again: `openenv push --repo-id your-username/openpm`
 
 ### If build succeeds:
+
 - Status will show **RUNNING** in green
 - Your Space is now live and public
 
@@ -92,6 +97,7 @@ curl -X POST "https://huggingface.co/spaces/your-username/openpm/call/reset" \
 ```
 
 **Expected output:**
+
 ```
 HTTP Status: 200
 {...observation data...}
@@ -108,6 +114,7 @@ python inference.py
 ```
 
 **Expected output:**
+
 ```
 Running inference on 3 tasks...
   Easy task: score = 1.0000
@@ -168,21 +175,25 @@ Once your Space is RUNNING and all tests pass:
 ## Troubleshooting
 
 ### Build stuck in BUILDING state (>30 min)
+
 - Likely Docker timeout
 - Check logs for errors
 - Try: `openenv push --repo-id your-username/openpm --force`
 
 ### Reset endpoint returns 500 error
+
 - Check Space logs for Python errors
 - Likely missing dependency or import error
 - Fix locally, push again
 
 ### Inference produces flat scores (all 0.0)
+
 - Space might not be starting correctly
 - Check if server process is running: visit Space URL in browser
 - If blank page, server didn't start — check logs
 
 ### Token still invalid
+
 - Token may have been auto-revoked by HF
 - Generate a fresh one at https://huggingface.co/settings/tokens
 - Ensure it has **Write** permission
@@ -191,14 +202,14 @@ Once your Space is RUNNING and all tests pass:
 
 ## Quick Reference: Key Dates & Constraints
 
-| Item | Value |
-|------|-------|
-| **Submission Deadline** | Apr 8, 2026, 11:59 PM IST |
-| **Runtime Limit** | < 20 minutes |
-| **Memory Limit** | 8 GB RAM |
-| **vCPU Limit** | 2 vCPU |
-| **Required Endpoints** | `/reset`, `/step`, `/state` |
-| **Baseline Script** | `inference.py` in root |
+| Item                    | Value                       |
+| ----------------------- | --------------------------- |
+| **Submission Deadline** | Apr 8, 2026, 11:59 PM IST   |
+| **Runtime Limit**       | < 20 minutes                |
+| **Memory Limit**        | 8 GB RAM                    |
+| **vCPU Limit**          | 2 vCPU                      |
+| **Required Endpoints**  | `/reset`, `/step`, `/state` |
+| **Baseline Script**     | `inference.py` in root      |
 
 ---
 

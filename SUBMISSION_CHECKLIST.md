@@ -10,6 +10,7 @@
 ## ✅ Pre-Deployment Verification (Local)
 
 ### Required Artifacts
+
 - ✅ **openenv.yaml** — Environment manifest with `spec_version: 1`, `runtime: fastapi`, `app: server.app:app`
 - ✅ **Dockerfile** — Multi-stage build from openenv-base with proper PYTHONPATH and entry point
 - ✅ **inference.py** — Root-level baseline inference script with auto-bootstrap and deterministic scoring
@@ -18,6 +19,7 @@
 - ✅ **uv.lock** — Deterministic dependency lockfile for reproducible builds
 
 ### Environment Package Structure
+
 - ✅ **openpm_env/env.py** — Core environment logic with reset(), step(), state() lifecycle
 - ✅ **openpm_env/models.py** — Typed Pydantic models: PMAction, PMObservation, PMState
 - ✅ **openpm_env/reward.py** — Reward calculation with partial progress and penalties
@@ -26,6 +28,7 @@
 - ✅ **server/app.py** — FastAPI server entry point with create_app() factory and main() function
 
 ### Local Validation Gates
+
 - ✅ **openenv validate** — CLI compliance check passes
 - ✅ **Docker build** — Image builds successfully without errors
 - ✅ **Reset endpoint** — Returns HTTP 200 with valid PMObservation
@@ -39,6 +42,7 @@
 - ✅ **Infra constraints** — Completes well under 20-minute target, suitable for 2 vCPU/8 GB environment
 
 ### Git Sync Status
+
 - ✅ **Remote sync** — All commits pushed to https://github.com/openepm/openpm.git
 - ✅ **Branch**: `main`
 - ✅ **Latest commit**: fe03c2a (Final README alignment verification)
@@ -49,6 +53,7 @@
 ## 🚀 Deployment Steps (Execute These)
 
 ### Step 1: Authenticate with Hugging Face
+
 ```bash
 pip install huggingface-hub
 huggingface-cli login
@@ -56,18 +61,21 @@ huggingface-cli login
 ```
 
 ### Step 2: Deploy to Hugging Face Spaces
+
 ```bash
 cd /path/to/openpm_project
 openenv push --repo-id your-username/openpm
 ```
 
 **Note**: If the command fails, try:
+
 ```bash
 huggingface-cli repo create openpm --type space --space-sdk docker
 openenv push --repo-id your-username/openpm
 ```
 
 This will:
+
 1. Create a new HF Space repository
 2. Upload the entire project files
 3. Build the Docker container on HF infrastructure
@@ -75,16 +83,20 @@ This will:
 5. Provide a public Space URL
 
 ### Step 3: Verify Space Health
+
 Once deployment completes (~5–10 minutes), visit:
+
 ```
 https://huggingface.co/spaces/your-username/openpm
 ```
 
 Confirm:
+
 - Space status shows **RUNNING** (not BUILDING or ERROR)
 - Space API is accessible at the public URL
 
 ### Step 4: Manual Endpoint Test (Optional)
+
 ```bash
 # Test the reset endpoint
 curl -X POST https://huggingface.co/spaces/your-username/openpm/reset \
@@ -98,15 +110,18 @@ curl -X POST https://huggingface.co/spaces/your-username/openpm/reset \
 ## 📋 Final Submission
 
 ### What to Submit
+
 1. **HF Space URL**: `https://huggingface.co/spaces/your-username/openpm`
 2. **GitHub Repository URL**: `https://github.com/openepm/openpm.git`
 
 ### Submission Window
+
 - **Opens**: March 28, 2026
 - **Closes**: April 8, 2026 at 11:59 PM IST (strict deadline)
 - **Team Lead Responsibility**: Only the team lead (Piyush Goel) can submit the final entry
 
 ### Submission Method
+
 1. Log into the hackathon platform
 2. Navigate to Round 1 submission form
 3. Paste your HF Space URL in the designated field
@@ -160,12 +175,12 @@ HF Spaces will automatically rebuild and update.
 
 ### Common Space Build Failures
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `ModuleNotFoundError: cannot import name` | Missing PYTHONPATH in Dockerfile | Check `ENV PYTHONPATH="/app/env:$PYTHONPATH"` in Dockerfile |
-| `Docker build timeout` | Large dependencies or slow connection | Ensure requirements are minimal; use uv.lock for speed |
-| `Connection refused on /reset` | Server not starting | Check Dockerfile CMD and app.py entry point |
-| `WebSocket timeout during inference` | Long LLM inference | Already handled; WebSocket ping interval is tuned |
+| Error                                     | Cause                                 | Fix                                                         |
+| ----------------------------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| `ModuleNotFoundError: cannot import name` | Missing PYTHONPATH in Dockerfile      | Check `ENV PYTHONPATH="/app/env:$PYTHONPATH"` in Dockerfile |
+| `Docker build timeout`                    | Large dependencies or slow connection | Ensure requirements are minimal; use uv.lock for speed      |
+| `Connection refused on /reset`            | Server not starting                   | Check Dockerfile CMD and app.py entry point                 |
+| `WebSocket timeout during inference`      | Long LLM inference                    | Already handled; WebSocket ping interval is tuned           |
 
 ### Local Debugging Before Push
 
