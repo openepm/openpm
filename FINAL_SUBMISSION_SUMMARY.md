@@ -5,7 +5,7 @@
 **Project:** OpenPM - Project Management RL Environment  
 **Team Lead:** Piyush Goel  
 **Team Member:** Divyansh Jha  
-**Submission Date:** March 31, 2026  
+**Submission Date:** March 31, 2026
 
 ---
 
@@ -20,16 +20,16 @@
 
 ## ✅ Verification Checklist (All Passing)
 
-| Check | Result | Evidence |
-|-------|--------|----------|
-| **GitHub Repository** | ✅ PASS | https://github.com/openepm/openpm.git (main branch up-to-date) |
-| **OpenEnv Validation** | ✅ PASS | `openenv validate --verbose` returns "Ready for multi-mode deployment" |
-| **Docker Build** | ✅ PASS | Built successfully from Dockerfile in project root |
-| **Root Package Structure** | ✅ PASS | `__init__.py`, `client.py`, `models.py` present and correct |
-| **Inference Reproducibility** | ✅ PASS | Baseline runs all 3 tasks in ~83ms with deterministic scores |
-| **Task Scores** | ✅ PASS | Easy=1.0, Medium=0.2495, Hard=0.4161, Aggregate=0.5552 |
-| **Reset Endpoint** | ✅ PASS | Returns HTTP 200 with valid typed observation |
-| **Documentation** | ✅ PASS | README includes schema, baseline results, setup instructions |
+| Check                         | Result  | Evidence                                                               |
+| ----------------------------- | ------- | ---------------------------------------------------------------------- |
+| **GitHub Repository**         | ✅ PASS | https://github.com/openepm/openpm.git (main branch up-to-date)         |
+| **OpenEnv Validation**        | ✅ PASS | `openenv validate --verbose` returns "Ready for multi-mode deployment" |
+| **Docker Build**              | ✅ PASS | Built successfully from Dockerfile in project root                     |
+| **Root Package Structure**    | ✅ PASS | `__init__.py`, `client.py`, `models.py` present and correct            |
+| **Inference Reproducibility** | ✅ PASS | Baseline runs all 3 tasks in ~83ms with deterministic scores           |
+| **Task Scores**               | ✅ PASS | Easy=1.0, Medium=0.2495, Hard=0.4161, Aggregate=0.5552                 |
+| **Reset Endpoint**            | ✅ PASS | Returns HTTP 200 with valid typed observation                          |
+| **Documentation**             | ✅ PASS | README includes schema, baseline results, setup instructions           |
 
 ---
 
@@ -73,12 +73,12 @@ openpm_project/
 
 ## 🎯 Baseline Performance
 
-| Task | Score | Progress | Steps | Runtime |
-|------|-------|----------|-------|---------|
-| Easy | 1.0000 | 100% | 7 | 24ms |
-| Medium | 0.2495 | 67.4% | 10 | 27ms |
-| Hard | 0.4161 | 86.5% | 12 | 32ms |
-| **Aggregate** | **0.5552** | - | 29 | **83ms** |
+| Task          | Score      | Progress | Steps | Runtime  |
+| ------------- | ---------- | -------- | ----- | -------- |
+| Easy          | 1.0000     | 100%     | 7     | 24ms     |
+| Medium        | 0.2495     | 67.4%    | 10    | 27ms     |
+| Hard          | 0.4161     | 86.5%    | 12    | 32ms     |
+| **Aggregate** | **0.5552** | -        | 29    | **83ms** |
 
 **Policy:** Deterministic rule-based priority assignment with dynamic blocker resolution.  
 **Infrastructure:** Runs on 2 vCPU / 8 GB environment well under 20-min limit.
