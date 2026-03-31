@@ -23,12 +23,16 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 def _pick_rule_action(observation) -> PMAction:
     tasks = observation.active_tasks
 
-    # Resolve blockers first
+    # Resolve only dynamic blockers first. Dependency blockers must be solved by completing prerequisites.
     for task in tasks:
-        if task.blocked and task.status != "completed":
+        if (
+            task.blocked
+            and task.status != "completed"
+            and bool(task.metadata.get("dynamic_blocked", False))
+        ):
             return PMAction(action_type="request_help", task_id=task.task_id)
 
-    # Then assign unassigned high-priority tasks
+    # Assign unblocked work by urgency first.
     unassigned = [
         task
         for task in tasks
@@ -48,34 +52,43 @@ def _pick_rule_action(observation) -> PMAction:
             if available
         ]
         if available_devs:
+            # Match task domain to the highest-skill available developer.
+            available_devs.sort(
+                key=lambda dev_id: (
+                    -observation.developer_skill_levels.get(dev_id, {}).get(target.domain, 0.0),
+                    dev_id,
+                )
+            )
             return PMAction(
                 action_type="assign_task",
                 task_id=target.task_id,
-                developer_id=sorted(available_devs)[0],
+                developer_id=available_devs[0],
             )
 
-    # Reprioritize overdue work
+    # Raise urgency for work that is close to due date.
     for task in tasks:
-        if task.status != "completed" and observation.day + 1 >= task.due_day and task.priority != "critical":
+        if (
+            task.status != "completed"
+            and observation.day + 1 >= task.due_day
+            and task.priority != "critical"
+        ):
             return PMAction(action_type="reprioritize_task", task_id=task.task_id, priority="critical")
 
-    # Mark near-complete tasks
+    # Confirm task completion when nearly done.
     for task in tasks:
         if task.status != "completed" and task.effort_remaining <= 0.2:
             return PMAction(action_type="mark_complete", task_id=task.task_id)
 
-    # Split long tasks to parallelize
-    for task in tasks:
-        if task.status != "completed" and task.effort_remaining > 1.8:
-            return PMAction(action_type="split_task", task_id=task.task_id)
-
-    # Fallback to delaying the most risky open task
+    # Final fallback: deterministic reprioritization of the earliest-due unfinished task.
     open_tasks = [task for task in tasks if task.status != "completed"]
     if open_tasks:
         open_tasks.sort(key=lambda task: task.due_day)
-        return PMAction(action_type="delay_task", task_id=open_tasks[0].task_id)
+        target = open_tasks[0]
+        if target.priority != "critical":
+            return PMAction(action_type="reprioritize_task", task_id=target.task_id, priority="critical")
+        return PMAction(action_type="mark_complete", task_id=target.task_id)
 
-    return PMAction(action_type="delay_task", task_id=tasks[0].task_id)
+    return PMAction(action_type="mark_complete", task_id=tasks[0].task_id)
 
 
 def _pick_openai_action(observation, client: OpenAI) -> PMAction:

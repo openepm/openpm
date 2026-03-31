@@ -15,15 +15,22 @@ def _count_completed(tasks: List[TaskSnapshot]) -> int:
 
 def _deadline_penalty(state: PMState) -> float:
     overdue = sum(1 for task in state.tasks if task.status != "completed" and state.day > task.due_day)
-    return min(0.6, overdue * 0.1)
+    return min(0.4, overdue * 0.06)
 
 
 def grade_state(state: PMState) -> float:
     total_tasks = max(1, len(state.tasks))
     completed_ratio = _count_completed(state.tasks) / total_tasks
-    invalid_penalty = min(0.4, state.invalid_action_count * 0.05)
-    risk_penalty = min(0.3, state.risk_level * 0.3)
-    score = completed_ratio - _deadline_penalty(state) - invalid_penalty - risk_penalty
+    progress_signal = state.sprint_progress
+    invalid_penalty = min(0.25, state.invalid_action_count * 0.03)
+    risk_penalty = min(0.2, state.risk_level * 0.2)
+    score = (
+        0.6 * completed_ratio
+        + 0.4 * progress_signal
+        - _deadline_penalty(state)
+        - invalid_penalty
+        - risk_penalty
+    )
     if state.project_completed and not state.project_failed:
         score += 0.2
     return _clamp01(score)
