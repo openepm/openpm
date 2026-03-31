@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import os
+import time
+from statistics import mean
+from typing import Dict, List
+
+from openai import OpenAI
+
+from openpm_env import OpenPMEnv, PMAction
+from openpm_env.graders import grade_for_task
+
+TASKS = ["easy", "medium", "hard"]
+MAX_STEPS = 25
+USE_OPENAI = os.getenv("OPENPM_USE_OPENAI", "0") == "1"
+
+API_BASE_URL = os.getenv("API_BASE_URL")
+MODEL_NAME = os.getenv("MODEL_NAME")
+HF_TOKEN = os.getenv("HF_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+def _pick_rule_action(observation) -> PMAction:
+    tasks = observation.active_tasks
+
+    # Resolve blockers first
+    for task in tasks:
+        if task.blocked and task.status != "completed":
+            return PMAction(action_type="request_help", task_id=task.task_id)
+
+    # Then assign unassigned high-priority tasks
+    unassigned = [
+        task
+        for task in tasks
+        if task.status != "completed" and task.assigned_to is None and not task.blocked
+    ]
+    if unassigned:
+        unassigned.sort(
+            key=lambda task: (
+                -{"low": 1, "medium": 2, "high": 3, "critical": 4}[task.priority],
+                task.due_day,
+            )
+        )
+        target = unassigned[0]
+        available_devs = [
+            dev_id
+            for dev_id, available in observation.developer_availability.items()
+            if available
+        ]
+        if available_devs:
+            return PMAction(
+                action_type="assign_task",
+                task_id=target.task_id,
+                developer_id=sorted(available_devs)[0],
+            )
+
+    # Reprioritize overdue work
+    for task in tasks:
+        if task.status != "completed" and observation.day + 1 >= task.due_day and task.priority != "critical":
+            return PMAction(action_type="reprioritize_task", task_id=task.task_id, priority="critical")
+
+    # Mark near-complete tasks
+    for task in tasks:
+        if task.status != "completed" and task.effort_remaining <= 0.2:
+            return PMAction(action_type="mark_complete", task_id=task.task_id)
+
+    # Split long tasks to parallelize
+    for task in tasks:
+        if task.status != "completed" and task.effort_remaining > 1.8:
+            return PMAction(action_type="split_task", task_id=task.task_id)
+
+    # Fallback to delaying the most risky open task
+    open_tasks = [task for task in tasks if task.status != "completed"]
+    if open_tasks:
+        open_tasks.sort(key=lambda task: task.due_day)
+        return PMAction(action_type="delay_task", task_id=open_tasks[0].task_id)
+
+    return PMAction(action_type="delay_task", task_id=tasks[0].task_id)
+
+
+def _pick_openai_action(observation, client: OpenAI) -> PMAction:
+    prompt = (
+        "You are a project manager agent in a deterministic sprint simulation. "
+        "Return one JSON object with keys: action_type, task_id, developer_id, priority. "
+        "Only use action_type from assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete. "
+        "Current observation: "
+        f"day={observation.day}, progress={observation.sprint_progress}, blocked={observation.blocked_tasks}, "
+        f"tasks={[(t.task_id, t.priority, t.status, t.assigned_to, t.effort_remaining, t.blocked) for t in observation.active_tasks]}, "
+        f"availability={observation.developer_availability}"
+    )
+
+    completion = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.0,
+        max_tokens=120,
+    )
+    content = completion.choices[0].message.content or "{}"
+
+    import json
+
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        return _pick_rule_action(observation)
+
+    try:
+        return PMAction(**parsed)
+    except Exception:
+        return _pick_rule_action(observation)
+
+
+def run_task(task_id: str, base_url: str) -> Dict[str, float]:
+    openai_client = None
+    if USE_OPENAI:
+        if not API_BASE_URL or not MODEL_NAME or not (HF_TOKEN or OPENAI_API_KEY):
+            raise RuntimeError(
+                "OPENPM_USE_OPENAI=1 requires API_BASE_URL, MODEL_NAME, and HF_TOKEN or OPENAI_API_KEY"
+            )
+        openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or OPENAI_API_KEY)
+
+    start = time.time()
+    with OpenPMEnv(base_url=base_url).sync() as env:
+        result = env.reset(task_id=task_id)
+
+        for _ in range(MAX_STEPS):
+            if result.done:
+                break
+            if openai_client is None:
+                action = _pick_rule_action(result.observation)
+            else:
+                action = _pick_openai_action(result.observation, openai_client)
+            result = env.step(action)
+
+        state = env.state()
+
+    duration_s = round(time.time() - start, 3)
+    score = grade_for_task(task_id, state)
+    return {
+        "score": round(score, 4),
+        "duration_s": duration_s,
+        "steps": float(state.step_count),
+        "progress": round(state.sprint_progress, 4),
+    }
+
+
+def main() -> None:
+    base_url = os.getenv("OPENPM_BASE_URL", "http://localhost:8000")
+    results: Dict[str, Dict[str, float]] = {}
+
+    for task_id in TASKS:
+        metrics = run_task(task_id, base_url)
+        results[task_id] = metrics
+        print(
+            f"task={task_id} score={metrics['score']:.4f} "
+            f"progress={metrics['progress']:.4f} steps={int(metrics['steps'])} duration_s={metrics['duration_s']:.3f}"
+        )
+
+    avg_score = mean(metric["score"] for metric in results.values())
+    total_duration = sum(metric["duration_s"] for metric in results.values())
+    print(f"aggregate_score={avg_score:.4f}")
+    print(f"total_duration_s={total_duration:.3f}")
+
+
+if __name__ == "__main__":
+    main()
