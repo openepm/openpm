@@ -38,12 +38,12 @@ Action space
 
 Action schema (PMAction)
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| action_type | str | yes | One of: assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete |
-| task_id | str | conditional | Required for all task-specific actions |
-| developer_id | str | conditional | Required for assign_task |
-| priority | str | conditional | Required for reprioritize_task; one of low, medium, high, critical |
+| Field        | Type | Required    | Notes                                                                                       |
+| ------------ | ---- | ----------- | ------------------------------------------------------------------------------------------- |
+| action_type  | str  | yes         | One of: assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete |
+| task_id      | str  | conditional | Required for all task-specific actions                                                      |
+| developer_id | str  | conditional | Required for assign_task                                                                    |
+| priority     | str  | conditional | Required for reprioritize_task; one of low, medium, high, critical                          |
 
 State and observation include
 
@@ -54,19 +54,19 @@ State and observation include
 
 Observation schema (PMObservation)
 
-| Field | Type | Notes |
-|---|---|---|
-| day | int | Current sprint day |
-| total_days | int | Sprint horizon for active task |
-| active_tasks | list[TaskSnapshot] | Per-task status, assignment, priority, dependencies, due day, blocker flags |
-| task_priorities | dict[str, str] | Current priority by task_id |
-| deadlines | dict[str, int] | Due day by task_id |
-| developer_availability | dict[str, bool] | Availability state per developer |
-| developer_skill_levels | dict[str, dict[str, float]] | Skill matrix by developer and domain |
-| blocked_tasks | list[str] | Task IDs currently blocked |
-| sprint_progress | float | Fraction of total effort completed |
-| risk_level | float | Normalized project risk estimate |
-| time_remaining | int | Remaining days in sprint |
+| Field                  | Type                        | Notes                                                                       |
+| ---------------------- | --------------------------- | --------------------------------------------------------------------------- |
+| day                    | int                         | Current sprint day                                                          |
+| total_days             | int                         | Sprint horizon for active task                                              |
+| active_tasks           | list[TaskSnapshot]          | Per-task status, assignment, priority, dependencies, due day, blocker flags |
+| task_priorities        | dict[str, str]              | Current priority by task_id                                                 |
+| deadlines              | dict[str, int]              | Due day by task_id                                                          |
+| developer_availability | dict[str, bool]             | Availability state per developer                                            |
+| developer_skill_levels | dict[str, dict[str, float]] | Skill matrix by developer and domain                                        |
+| blocked_tasks          | list[str]                   | Task IDs currently blocked                                                  |
+| sprint_progress        | float                       | Fraction of total effort completed                                          |
+| risk_level             | float                       | Normalized project risk estimate                                            |
+| time_remaining         | int                         | Remaining days in sprint                                                    |
 
 Tasks and graders
 
@@ -116,11 +116,11 @@ Baseline results (reference run)
 
 The deterministic rule-based baseline produces reproducible non-flat scores across all required tasks.
 
-| Task | Score |
-|---|---|
-| easy | 1.0000 |
-| medium | 0.2495 |
-| hard | 0.4161 |
+| Task      | Score  |
+| --------- | ------ |
+| easy      | 1.0000 |
+| medium    | 0.2495 |
+| hard      | 0.4161 |
 | aggregate | 0.5552 |
 
 Reference runtime: approximately 6-10 seconds on a local dev machine, well within the 20-minute submission constraint.
