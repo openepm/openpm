@@ -20,8 +20,8 @@ tags:
 </p>
 
 <p align="center">
-  <a href="https://huggingface.co/spaces/divyanshjha/openpm"><img src="https://img.shields.io/badge/Open%20Live%20Space-111827?style=for-the-badge&logo=huggingface&logoColor=FFD21E" alt="Open Live Space" /></a>
-  <a href="https://divyanshjha-openpm.hf.space/web/"><img src="https://img.shields.io/badge/Open%20Playground-1d4ed8?style=for-the-badge" alt="Open Playground" /></a>
+  <a href="https://huggingface.co/spaces/piyushgoel2808/openpm"><img src="https://img.shields.io/badge/Open%20Live%20Space-111827?style=for-the-badge&logo=huggingface&logoColor=FFD21E" alt="Open Live Space" /></a>
+  <a href="https://piyushgoel2808-openpm.hf.space/web/"><img src="https://img.shields.io/badge/Open%20Playground-1d4ed8?style=for-the-badge" alt="Open Playground" /></a>
   <a href="https://github.com/openepm/openpm"><img src="https://img.shields.io/badge/Open%20GitHub-0f172a?style=for-the-badge&logo=github" alt="Open GitHub" /></a>
 </p>
 
@@ -173,20 +173,20 @@ Open the Space and use the UI controls:
 
 Playground URL:
 
-- `https://divyanshjha-openpm.hf.space/web/`
+- `https://piyushgoel2808-openpm.hf.space/web/`
 
 ### Space Home
 
-- `https://huggingface.co/spaces/divyanshjha/openpm`
+- `https://huggingface.co/spaces/piyushgoel2808/openpm`
 
 ## API Testing with curl
 
 Use the Space subdomain endpoint for API calls.
 
 ```bash
-curl -X POST "https://divyanshjha-openpm.hf.space/reset" -H "Content-Type: application/json" -d "{}"
-curl -X GET "https://divyanshjha-openpm.hf.space/state"
-curl -X POST "https://divyanshjha-openpm.hf.space/step" -H "Content-Type: application/json" -d '{"action":{"action_type":"assign_task","task_id":"T1","developer_id":"D1"}}'
+curl -X POST "https://piyushgoel2808-openpm.hf.space/reset" -H "Content-Type: application/json" -d "{}"
+curl -X GET "https://piyushgoel2808-openpm.hf.space/state"
+curl -X POST "https://piyushgoel2808-openpm.hf.space/step" -H "Content-Type: application/json" -d '{"action":{"action_type":"assign_task","task_id":"T1","developer_id":"D1"}}'
 ```
 
 Important:
@@ -201,7 +201,7 @@ Important:
 ```python
 from openpm_env import OpenPMEnv, PMAction
 
-with OpenPMEnv.from_env("divyanshjha/openpm").sync() as env:
+with OpenPMEnv.from_env("piyushgoel2808/openpm").sync() as env:
     result = env.reset(task_id="easy")
     result = env.step(PMAction(action_type="assign_task", task_id="T1", developer_id="D1"))
     print(result.reward, result.done)
@@ -239,7 +239,7 @@ Robustness behavior:
 ```bash
 openenv validate
 docker build -t openpm-env:latest .
-openenv push --repo-id divyanshjha/openpm
+openenv push --repo-id piyushgoel2808/openpm
 ```
 
 ## Baseline Results
@@ -278,7 +278,7 @@ Cause:
 
 Fix:
 
-- Use `https://divyanshjha-openpm.hf.space` endpoints.
+- Use `https://piyushgoel2808-openpm.hf.space` endpoints.
 
 ### `openenv push` complains about missing `__init__.py`
 

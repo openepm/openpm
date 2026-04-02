@@ -18,12 +18,13 @@ from openpm_env.graders import grade_for_task
 
 TASKS = ["easy", "medium", "hard"]
 MAX_STEPS = 25
-USE_OPENAI = os.getenv("OPENPM_USE_OPENAI", "0") == "1"
 
 API_BASE_URL = os.getenv("API_BASE_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")
 HF_TOKEN = os.getenv("HF_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+USE_OPENAI = bool(API_BASE_URL and MODEL_NAME) or os.getenv("OPENPM_USE_OPENAI", "0") == "1"
 
 _SERVER_PROCESS: subprocess.Popen | None = None
 
@@ -216,23 +217,43 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             )
         openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or OPENAI_API_KEY)
 
+    model_display_name = MODEL_NAME if MODEL_NAME else "rule_based"
+    print(f"[START] task={task_id} env=openpm model={model_display_name}")
+
     start = time.time()
+    rewards_history = []
+    
     with OpenPMEnv(base_url=base_url).sync() as env:
         result = env.reset(task_id=task_id)
 
-        for _ in range(MAX_STEPS):
+        for step_idx in range(MAX_STEPS):
             if result.done:
                 break
             if openai_client is None:
                 action = _pick_rule_action(result.observation)
             else:
                 action = _pick_openai_action(result.observation, openai_client)
-            result = env.step(action)
+            
+            try:
+                result = env.step(action)
+                step_reward = result.reward
+                rewards_history.append(step_reward)
+                done_str = "true" if result.done else "false"
+                action_str = f"{action.action_type}({action.task_id or ''})"
+                print(f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error=null")
+            except Exception as e:
+                print(f"[STEP] step={step_idx + 1} action={action.action_type} reward=0.00 done=false error={str(e)}")
+                break
 
         state = env.state()
 
     duration_s = round(time.time() - start, 3)
     score = grade_for_task(task_id, state)
+    
+    success_str = "true" if (state.project_completed and not state.project_failed) else "false"
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
+    print(f"[END] success={success_str} steps={state.step_count} rewards={rewards_str}")
+    
     return {
         "score": round(score, 4),
         "duration_s": duration_s,
@@ -249,15 +270,9 @@ def main() -> None:
     for task_id in TASKS:
         metrics = run_task(task_id, base_url)
         results[task_id] = metrics
-        print(
-            f"task={task_id} score={metrics['score']:.4f} "
-            f"progress={metrics['progress']:.4f} steps={int(metrics['steps'])} duration_s={metrics['duration_s']:.3f}"
-        )
 
     avg_score = mean(metric["score"] for metric in results.values())
     total_duration = sum(metric["duration_s"] for metric in results.values())
-    print(f"aggregate_score={avg_score:.4f}")
-    print(f"total_duration_s={total_duration:.3f}")
 
 
 if __name__ == "__main__":
