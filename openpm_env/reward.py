@@ -14,6 +14,7 @@ class RewardBreakdown:
     invalid_penalty: float = 0.0
     deadline_penalty: float = 0.0
     completion_bonus: float = 0.0
+    blocker_penalty: float = 0.0
 
     @property
     def total(self) -> float:
@@ -25,6 +26,7 @@ class RewardBreakdown:
             - self.invalid_penalty
             - self.deadline_penalty
             + self.completion_bonus
+            - self.blocker_penalty
         )
 
 
@@ -42,9 +44,12 @@ def compute_reward(
     breakdown.progress = round(progress_delta * 0.6, 4)
 
     if good_prioritization:
-        breakdown.prioritization = 0.3
+        breakdown.prioritization = 0.0
     if helped_blocker:
-        breakdown.blocker_resolution = 0.2
+        breakdown.blocker_resolution = 0.0
+
+    active_blockers_count = sum(1 for t in state.tasks if t.blocked and t.status != "completed")
+    breakdown.blocker_penalty = min(0.4, active_blockers_count * 0.1)
 
     if invalid_action:
         breakdown.invalid_penalty = 0.5
@@ -65,6 +70,6 @@ def compute_reward(
     breakdown.deadline_penalty = min(0.4, overdue_count * 0.1)
 
     if state.project_completed and not state.project_failed:
-        breakdown.completion_bonus = 1.0
+        breakdown.completion_bonus = 0.4
 
     return breakdown
