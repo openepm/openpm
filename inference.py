@@ -115,7 +115,13 @@ def _pick_rule_action(observation) -> PMAction:
             and task.status != "completed"
             and bool(task.metadata.get("dynamic_blocked", False))
         ):
-            return PMAction(action_type="request_help", task_id=task.task_id)
+            available_devs = [
+                dev_id for dev_id, available in observation.developer_availability.items() if available
+            ]
+            if available_devs:
+                return PMAction(action_type="request_help", task_id=task.task_id, helper_developer_id=available_devs[0])
+            else:
+                return PMAction(action_type="delay_task", task_id=task.task_id)
 
     # Assign unblocked work by urgency first.
     unassigned = [
@@ -224,7 +230,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
     rewards_history = []
     
     with OpenPMEnv(base_url=base_url).sync() as env:
-        result = env.reset(task_id=task_id)
+        result = env.reset(task_id=task_id, seed=42)
 
         for step_idx in range(MAX_STEPS):
             if result.done:
