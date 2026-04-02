@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import random
 from typing import Any, Dict, Optional
 
 from openenv.core.env_server.interfaces import Environment
@@ -37,6 +38,7 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
         episode_id: Optional[str] = None,
         **kwargs: Any,
     ) -> PMObservation:
+        self.rng = random.Random(seed if seed is not None else 42)
         scenario_id = str(kwargs.get("task_id", "easy")).lower()
         if scenario_id not in SCENARIOS:
             scenario_id = "easy"
@@ -73,6 +75,7 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
         self._state.step_count += 1
         self._state.day += 1
         self._inject_dynamic_blockers()
+        self._apply_stochastic_risk()
         self._advance_work()
         self._refresh_task_flags()
         self._update_progress_risk_and_terminal()
@@ -168,6 +171,15 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
 
         if action.action_type in {"assign_task", "reprioritize_task", "split_task", "request_help", "delay_task", "mark_complete"} and not action.task_id:
             return "task_id_required"
+
+        if action.action_type == "request_help":
+            if not action.helper_developer_id:
+                return "helper_developer_id_required"
+            helper = self._get_developer(action.helper_developer_id)
+            if helper is None:
+                return "helper_not_found"
+            if not helper.available:
+                return "helper_busy"
 
         if action.action_type == "assign_task" and not action.developer_id:
             return "developer_id_required"
@@ -280,6 +292,21 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
                 task.metadata["dynamic_blocked"] = True
                 task.blocked = True
                 self._event_log.append(f"blocked:{task.task_id}")
+
+    def _apply_stochastic_risk(self) -> None:
+        if not hasattr(self, "rng"):
+            self.rng = random.Random(42)
+        for task in self._state.tasks:
+            if task.status == "in_progress" and not task.blocked:
+                if self.rng.random() < 0.10:
+                    if self.rng.choice(["delay", "block"]) == "delay":
+                        task.effort_remaining += 1.0
+                        task.effort_total += 1.0
+                        self._event_log.append(f"risk_delay:{task.task_id}")
+                    else:
+                        task.metadata["dynamic_blocked"] = True
+                        task.blocked = True
+                        self._event_log.append(f"risk_blocked:{task.task_id}")
 
     def _advance_work(self) -> None:
         for developer in self._state.developers:

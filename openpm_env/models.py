@@ -23,6 +23,7 @@ class PMAction(Action):
     task_id: Optional[str] = None
     developer_id: Optional[str] = None
     priority: Optional[Priority] = None
+    helper_developer_id: Optional[str] = Field(None, description="The ID of the developer to request help from. Required when action_type is request_help.")
 
 
 class DeveloperSnapshot(State):
