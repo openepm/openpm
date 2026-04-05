@@ -1,5 +1,7 @@
 """OpenPM: Project Management RL Environment for OpenEnv Hackathon"""
 
-from openpm_env import PMAction, PMObservation, PMState, PMEnv
+from openpm_env import OpenPMEnv, PMAction, PMObservation, PMState
 
-__all__ = ["PMAction", "PMObservation", "PMState", "PMEnv"]
+PMEnv = OpenPMEnv
+
+__all__ = ["PMAction", "PMObservation", "PMState", "OpenPMEnv", "PMEnv"]

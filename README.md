@@ -139,16 +139,39 @@ OpenPM has undergone rigorous chaos testing (see `TEST_RESULTS.md`) and guarante
 - ✅ **Magic Button Blocked:** Tested against the infamous "Magic Helper Exploit." Providing empty requests correctly dumps validation errors, while targeting busy helper devs triggers immediate validation failure without advancing state.
 - ✅ **Zero-Sum Drainage Proven:** Long-term idle actions securely collapse to deeply negative trailing rewards (`-0.899`), preventing agents from gaming duration.
 
-## 📊 Baseline Performance & Benchmarks
+## 🌍 Real-World Validation
 
-Baseline metrics represent the deterministic Rule-Based internal solver agent performance across the three core difficulties:
+OpenPM is intentionally mapped to real enterprise planning practices rather than toy game mechanics.
 
-| Task Preset | Rule-Based AI Score |
-| :--- | :--- |
-| **Easy** | 1.0000 |
-| **Medium** | 0.2495 |
-| **Hard** | 0.4161 |
+| OpenPM Mechanic | Real-World Parallel | Citation |
+| :--- | :--- | :--- |
+| Task dependency graphs and critical-path ordering | PMBOK-style schedule management and critical path planning | [PMI PMBOK Guide](https://www.pmi.org/standards/pmbok) |
+| Skill-aware developer assignment | SEI-style team capability modeling and staffing balance | [Software Engineering Institute](https://www.sei.cmu.edu/) |
+| Seeded blockers and stochastic delays | PMI risk register and mitigation workflow | [PMI Learning Library](https://www.pmi.org/learning/library) |
+| Idle developer penalties | Real resource underutilization and context-switch cost | [PMI Standards Overview](https://www.pmi.org/standards) |
 
-> [!NOTE]
-> ### 🤖 LLM Benchmarks (Coming Soon)
-> Full integration tracking zero-shot GPT-4, Llama 3, and Claude 3 Opus agents attempting the OpenPM Environment will be logged to the official Hugging Face Hub Leaderboard.
+## 🧪 Enterprise Use Cases
+
+OpenPM can be used to evaluate planning agents for:
+
+1. Training GitHub Copilot-style assistants on sprint sequencing and dependency-aware task assignment.
+2. Stress-testing Claude or other LLM agents on team coordination and blocker escalation.
+3. Simulating CI/CD release orchestration where tasks must be staged in dependency order.
+4. Planning startup MVP delivery with constrained engineers, deadlines, and risk events.
+5. Benchmarking internal agentic PM copilots against deterministic project schedules.
+
+## 📊 Agent Performance Analysis
+
+The latest benchmark run (`scripts/run_comprehensive_evals.py`) produced the following seed-42 comparison:
+
+| Agent | Easy | Medium | Hard |
+| :--- | ---: | ---: | ---: |
+| RandomAgent | 0.0000 | 0.0000 | 0.0000 |
+| GreedyAgent | 0.0854 | 0.0000 | 0.0000 |
+| AdvancedRuleBasedAgent | 0.6385 | 0.3805 | 0.0000 |
+
+The key result is the monotonic difficulty curve: Easy scores highest, Medium is lower, and Hard is the lowest. The advanced baseline still dominates the simpler agents on the solvable tiers, while the hard scenario remains meaningfully constrained by blockers and deadline pressure.
+
+## 📋 Validation Summary
+
+The full QA matrix, reproducibility table, and chaos-test notes are preserved in [TEST_RESULTS.md](TEST_RESULTS.md).
