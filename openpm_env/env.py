@@ -93,7 +93,7 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
 
         done = self._state.project_completed or self._state.project_failed
         obs = self._build_observation(reward=reward, done=done)
-        obs.metadata["reward_breakdown"] = reward_breakdown.__dict__
+        obs.metadata["reward_breakdown"] = reward_breakdown.model_dump()
         return obs
 
     @property

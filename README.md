@@ -73,6 +73,27 @@ with OpenPMEnv(base_url="http://localhost:8000").sync() as env:
     env.step(PMAction(action_type="assign_task", task_id="T2", developer_id="D2"))
 ```
 
+### Setup/Docker Instructions
+
+To run the environment isolated via Docker locally:
+```bash
+docker build -t openpm-env:latest .
+docker run -p 8000:8000 openpm-env:latest
+```
+Once started, the environment API will be accessible on `http://localhost:8000`.
+
+### Environment Variables Guide
+
+When running LLM inference (`inference.py`), ensure the following variables are configured in your environment:
+
+| Variable | Description | Default | Required? |
+| :--- | :--- | :--- | :--- |
+| `HF_TOKEN` | Hugging Face Access Token required for authenticating with Space endpoints and OpenEnv logic. | *(None)* | **Yes** |
+| `OPENAI_API_KEY` | Equivalent to `HF_TOKEN`, used strictly if executing the environment via OpenAI SDK proxy. | *(None)* | No |
+| `API_BASE_URL` | Endpoint to route OpenAI logic completions. | `http://localhost:8000/v1` | No |
+| `MODEL_NAME` | Desired LLM model identifier (e.g., `gpt-4`). | `gpt-4` | No |
+| `OPENPM_USE_OPENAI`| Set to `1` to toggle from rule-based AI to external LLM processing. | `0` | No |
+
 ## ⚙️ Core Mechanics (Schemas & Rules)
 
 ### Standard Action Space (`PMAction`)

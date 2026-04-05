@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from openpm_env.models import PMState
 
 
-@dataclass
-class RewardBreakdown:
+from pydantic import BaseModel
+
+class RewardBreakdown(BaseModel):
     progress: float = 0.0
     prioritization: float = 0.0
     blocker_resolution: float = 0.0
