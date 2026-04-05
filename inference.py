@@ -258,7 +258,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
     
     success_str = "true" if (state.project_completed and not state.project_failed) else "false"
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
-    print(f"[END] success={success_str} steps={state.step_count} rewards={rewards_str}")
+    print(f"[END] success={success_str} steps={state.step_count} score={score:.2f} rewards={rewards_str}")
     
     return {
         "score": round(score, 4),
