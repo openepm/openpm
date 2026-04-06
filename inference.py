@@ -223,7 +223,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             raise RuntimeError(
                 "OPENPM_USE_OPENAI=1 requires API_BASE_URL, MODEL_NAME, and HF_TOKEN or OPENAI_API_KEY"
             )
-        openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN or OPENAI_API_KEY)
+        openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     model_display_name = MODEL_NAME if MODEL_NAME else "rule_based"
     print(f"[START] task={task_id} env=openpm model={model_display_name}")
