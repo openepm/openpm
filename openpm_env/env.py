@@ -122,6 +122,7 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
                 developer_id=seed.developer_id,
                 available=True,
                 assigned_task_id=None,
+                busy_until_day=0,
                 skill_profile=dict(seed.skill_profile),
             )
             for seed in scenario.developers
@@ -206,6 +207,9 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
         if action.action_type == "mark_complete" and task is not None and task.effort_remaining > 0.2:
             return "task_not_ready_for_completion"
 
+        if action.action_type == "request_help" and task is not None and not task.blocked:
+            return "task_not_blocked"
+
         return None
 
     def _apply_action(self, action: PMAction) -> tuple[bool, bool]:
@@ -225,6 +229,8 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
                 if task.status == "todo" and not task.blocked:
                     task.status = "in_progress"
                 self._event_log.append(f"assign:{task.task_id}:{developer.developer_id}")
+                if task.priority in {"high", "critical"}:
+                    good_prioritization = True
 
         elif action.action_type == "reprioritize_task" and action.priority is not None:
             previous = task.priority
@@ -237,12 +243,15 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
             self._event_log.append(f"split:{task.task_id}")
 
         elif action.action_type == "request_help":
+            helper = self._get_developer(action.helper_developer_id)
+            if helper is not None:
+                helper.available = False
+                helper.busy_until_day = self._state.day + 1
             if task.metadata.get("dynamic_blocked"):
                 task.metadata["dynamic_blocked"] = False
-                helped_blocker = True
             task.blocked = False
-            task.effort_remaining = max(0.0, task.effort_remaining - 0.4)
-            self._event_log.append(f"help:{task.task_id}")
+            helped_blocker = True
+            self._event_log.append(f"help:{task.task_id}:{action.helper_developer_id}")
 
         elif action.action_type == "delay_task":
             task.due_day += 1
@@ -310,6 +319,10 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
 
     def _advance_work(self) -> None:
         for developer in self._state.developers:
+            if developer.busy_until_day >= self._state.day and developer.assigned_task_id is None:
+                developer.available = False
+                continue
+
             if developer.assigned_task_id is None:
                 developer.available = True
                 continue

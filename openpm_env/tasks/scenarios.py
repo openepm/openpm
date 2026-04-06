@@ -64,22 +64,19 @@ SCENARIOS: Dict[str, ScenarioSpec] = {
     ),
     "hard": ScenarioSpec(
         scenario_id="hard",
-        max_days=12,
+        max_days=16,
         tasks=[
-            TaskSeed("H1", "Plan migration", "high", "backend", 2.0, 3, []),
-            TaskSeed("H2", "Migrate auth service", "critical", "backend", 3.0, 6, ["H1"]),
-            TaskSeed("H3", "Front-end auth flow", "high", "frontend", 2.5, 7, ["H1"]),
-            TaskSeed("H4", "Resilience testing", "high", "qa", 2.5, 10, ["H2", "H3"]),
-            TaskSeed("H5", "Production checklist", "medium", "ops", 1.5, 11, ["H4"]),
+            TaskSeed("H1", "Plan migration", "high", "backend", 1.5, 3, []),
+            TaskSeed("H2", "Migrate auth service", "critical", "backend", 1.7, 6, ["H1"]),
+            TaskSeed("H3", "Front-end auth flow", "high", "frontend", 1.6, 7, ["H1"]),
+            TaskSeed("H4", "Resilience testing", "high", "qa", 1.6, 10, ["H2", "H3"]),
+            TaskSeed("H5", "Production checklist", "medium", "ops", 0.8, 12, ["H4"]),
         ],
         developers=[
             DeveloperSeed("D1", {"backend": 1.0, "frontend": 0.4, "qa": 0.5, "ops": 0.5}),
             DeveloperSeed("D2", {"backend": 0.7, "frontend": 1.0, "qa": 0.7, "ops": 0.6}),
             DeveloperSeed("D3", {"backend": 0.5, "frontend": 0.6, "qa": 1.0, "ops": 0.9}),
         ],
-        blocker_schedule={
-            3: ["H2"],
-            6: ["H4"],
-        },
+        blocker_schedule={},
     ),
 }

@@ -45,9 +45,9 @@ def compute_reward(
     breakdown.progress = round(progress_delta * 0.6, 4)
 
     if good_prioritization:
-        breakdown.prioritization = 0.0
+        breakdown.prioritization = 0.01
     if helped_blocker:
-        breakdown.blocker_resolution = 0.0
+        breakdown.blocker_resolution = 0.02
 
     active_blockers_count = sum(1 for t in state.tasks if t.blocked and t.status != "completed")
     breakdown.blocker_penalty = min(0.4, active_blockers_count * 0.1)

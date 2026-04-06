@@ -32,6 +32,7 @@ class DeveloperSnapshot(State):
     developer_id: str = Field(..., description="Unique identifier for the developer.")
     available: bool = Field(True, description="True if the developer is free to take a task, false if currently assigned to a task.")
     assigned_task_id: Optional[str] = Field(None, description="The ID of the task currently assigned to this developer, if any.")
+    busy_until_day: int = Field(0, description="Sprint day until which the developer is temporarily unavailable due to support or coordination work.")
     skill_profile: Dict[str, float] = Field(default_factory=dict, description="A mapping of task domains (e.g., 'backend', 'frontend') to a decimal skill multiplier (0.0 to 1.0). Higher skill means tasks complete faster.")
 
 

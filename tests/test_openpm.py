@@ -35,6 +35,28 @@ def test_invalid_action_validation_and_penalty() -> None:
     assert invalid_obs.reward < 0.0
 
 
+def test_request_help_exploit_prevention() -> None:
+    env = OpenPMEnvironment()
+    obs = env.reset(task_id="easy", seed=42)
+
+    unblocked_task = next(task for task in obs.active_tasks if not task.blocked and task.status != "completed")
+    helper_id = next(dev_id for dev_id, available in obs.developer_availability.items() if available)
+
+    step_obs = env.step(
+        PMAction(
+            action_type="request_help",
+            task_id=unblocked_task.task_id,
+            helper_developer_id=helper_id,
+        )
+    )
+
+    assert step_obs.reward < 0.0
+    assert any("invalid:task_not_blocked" in entry for entry in step_obs.event_log)
+
+    helper = next(dev for dev in env.state.developers if dev.developer_id == helper_id)
+    assert helper.available is True
+
+
 def test_reward_and_grader_bounds() -> None:
     env = OpenPMEnvironment()
     obs = env.reset(task_id="hard", seed=42)
