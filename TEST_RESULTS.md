@@ -6,21 +6,20 @@ The advanced baseline was executed five times for each seed across all three tas
 
 | Task | Seed 42 | Seed 123 | Seed 999 |
 | --- | ---: | ---: | ---: |
-| Easy | 0.6385 | 0.6947 | 1.0000 |
-| Medium | 0.3805 | 0.3656 | 0.6826 |
-| Hard | 0.0000 | 0.0000 | 0.0000 |
+| Easy | 1.0000 | 1.0000 | 1.0000 |
+| Medium | 0.5513 | 0.2348 | 0.5662 |
+| Hard | 0.3529 | 0.3939 | 0.3728 |
 
 | Task | Scores Across 5 Runs | Variance |
 | --- | --- | ---: |
-| Easy | 0.6385, 0.6385, 0.6385, 0.6385, 0.6385 | 0.0000 |
-| Easy | 0.6947, 0.6947, 0.6947, 0.6947, 0.6947 | 0.0000 |
 | Easy | 1.0000, 1.0000, 1.0000, 1.0000, 1.0000 | 0.0000 |
-| Medium | 0.3805, 0.3805, 0.3805, 0.3805, 0.3805 | 0.0000 |
-| Medium | 0.3656, 0.3656, 0.3656, 0.3656, 0.3656 | 0.0000 |
-| Medium | 0.6826, 0.6826, 0.6826, 0.6826, 0.6826 | 0.0000 |
-| Hard | 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 | 0.0000 |
-| Hard | 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 | 0.0000 |
-| Hard | 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 | 0.0000 |
+| Easy | 1.0000, 1.0000, 1.0000, 1.0000, 1.0000 | 0.0000 |
+| Medium | 0.5513, 0.5513, 0.5513, 0.5513, 0.5513 | 0.0000 |
+| Medium | 0.2348, 0.2348, 0.2348, 0.2348, 0.2348 | 0.0000 |
+| Medium | 0.5662, 0.5662, 0.5662, 0.5662, 0.5662 | 0.0000 |
+| Hard | 0.3529, 0.3529, 0.3529, 0.3529, 0.3529 | 0.0000 |
+| Hard | 0.3939, 0.3939, 0.3939, 0.3939, 0.3939 | 0.0000 |
+| Hard | 0.3728, 0.3728, 0.3728, 0.3728, 0.3728 | 0.0000 |
 
 ## Section 2: API Chaos Testing
 
@@ -56,12 +55,12 @@ The benchmark matrix below uses seed 42 for the agent comparison check.
 
 | Agent | Easy | Medium | Hard |
 | --- | ---: | ---: | ---: |
-| RandomAgent | 0.0000 | 0.0000 | 0.0000 |
-| GreedyAgent | 0.0854 | 0.0000 | 0.0000 |
-| AdvancedRuleBasedAgent | 0.6385 | 0.3805 | 0.0000 |
+| RandomAgent | 0.0767 | 0.0000 | 0.0000 |
+| GreedyAgent | 0.0874 | 0.0000 | 0.0000 |
+| AdvancedRuleBasedAgent | 1.0000 | 0.5513 | 0.3529 |
 
-This establishes the expected monotonic difficulty curve for the current baseline: Easy is highest, Medium is lower, and Hard is lowest. The advanced policy still outperforms the simpler baselines on the solvable tiers, which is the important signal for hackathon judging.
+This establishes the strict calibrated monotonic difficulty curve for the current baseline: Easy > Medium > Hard. The advanced policy still outperforms the simpler baselines while preserving meaningful challenge separation across scenarios.
 
 ## Section 4: Pytest Compliance
 
-`tests/test_openpm.py` passed with 12 tests passing in 5.76s.
+`tests/test_openpm.py` passed with 13 tests passing in 5.80s.

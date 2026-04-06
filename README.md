@@ -166,11 +166,11 @@ The latest benchmark run (`scripts/run_comprehensive_evals.py`) produced the fol
 
 | Agent | Easy | Medium | Hard |
 | :--- | ---: | ---: | ---: |
-| RandomAgent | 0.0000 | 0.0000 | 0.0000 |
-| GreedyAgent | 0.0854 | 0.0000 | 0.0000 |
-| AdvancedRuleBasedAgent | 0.6385 | 0.3805 | 0.0000 |
+| RandomAgent | 0.0767 | 0.0000 | 0.0000 |
+| GreedyAgent | 0.0874 | 0.0000 | 0.0000 |
+| AdvancedRuleBasedAgent | 1.0000 | 0.5513 | 0.3529 |
 
-The key result is the monotonic difficulty curve: Easy scores highest, Medium is lower, and Hard is the lowest. The advanced baseline still dominates the simpler agents on the solvable tiers, while the hard scenario remains meaningfully constrained by blockers and deadline pressure.
+The calibrated key result is the strict monotonic difficulty cascade: Easy > Medium > Hard. The advanced baseline dominates both simpler agents while still showing measurable degradation as scenario complexity increases.
 
 ## 📋 Validation Summary
 
