@@ -168,9 +168,9 @@ The latest benchmark run (`scripts/run_comprehensive_evals.py`) produced the fol
 | :--- | ---: | ---: | ---: |
 | RandomAgent | 0.0767 | 0.0000 | 0.0000 |
 | GreedyAgent | 0.0874 | 0.0000 | 0.0000 |
-| AdvancedRuleBasedAgent | 1.0000 | 0.5513 | 0.3529 |
+| AdvancedRuleBasedAgent | 1.0000 | 0.5900 | 0.0000 |
 
-The calibrated key result is the strict monotonic difficulty cascade: Easy > Medium > Hard. The advanced baseline dominates both simpler agents while still showing measurable degradation as scenario complexity increases.
+The calibrated key result is a globally stable monotonic difficulty cascade: Easy > Medium > Hard. Across all tested seeds (42, 123, 999), the advanced baseline preserves this ordering while remaining fully deterministic for repeated runs per seed.
 
 ## 📋 Validation Summary
 
