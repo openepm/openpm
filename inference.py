@@ -209,16 +209,16 @@ def _pick_openai_action(observation, client: OpenAI) -> Dict[str, Any]:
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError as e:
-            print(f"[WARN] openai_json_error={str(e)}")
+            print(f"[WARN] openai_json_error={str(e)}", flush=True)
             return {"action_type": "invalid_fallback"}
 
         if not isinstance(parsed, dict):
-            print("[WARN] openai_payload_error=non_dict_response")
+            print("[WARN] openai_payload_error=non_dict_response", flush=True)
             return {"action_type": "invalid_fallback"}
 
         return parsed
     except Exception as e:
-        print(f"[WARN] openai_api_error={str(e)}")
+        print(f"[WARN] openai_api_error={str(e)}", flush=True)
         return {"action_type": "invalid_fallback"}
 
 
@@ -232,57 +232,66 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
         openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     model_display_name = MODEL_NAME if MODEL_NAME else "rule_based"
-    print(f"[START] task={task_id} env=openpm model={model_display_name}")
+    print(f"[START] task={task_id} env=openpm model={model_display_name}", flush=True)
 
     start = time.time()
     rewards_history = []
-    
-    with OpenPMEnv(base_url=base_url).sync() as env:
-        result = env.reset(task_id=task_id, seed=42)
+    success = False
+    steps_taken = 0
+    score = 0.0
 
-        for step_idx in range(MAX_STEPS):
-            if result.done:
-                break
-            if openai_client is None:
-                action = _pick_rule_action(result.observation)
-            else:
-                action_payload = _pick_openai_action(result.observation, openai_client)
-                if action_payload.get("action_type") == "invalid_fallback":
-                    action = _pick_rule_action(result.observation)
-                else:
-                    try:
-                        action = PMAction(**action_payload)
-                    except Exception:
-                        action = _pick_rule_action(result.observation)
+    try:
+        with OpenPMEnv(base_url=base_url).sync() as env:
+            result = env.reset(task_id=task_id, seed=42)
 
-            try:
-                result = env.step(action)
-                step_reward = result.reward
-                rewards_history.append(step_reward)
-                done_str = "true" if result.done else "false"
-                action_str = f"{action.action_type}({action.task_id or ''})"
-                print(f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error=null")
+            for step_idx in range(MAX_STEPS):
                 if result.done:
                     break
-            except Exception as e:
-                print(f"[STEP] step={step_idx + 1} action={action.action_type} reward=0.00 done=false error={str(e)}")
-                break
+                if openai_client is None:
+                    action = _pick_rule_action(result.observation)
+                else:
+                    action_payload = _pick_openai_action(result.observation, openai_client)
+                    if action_payload.get("action_type") == "invalid_fallback":
+                        action = _pick_rule_action(result.observation)
+                    else:
+                        try:
+                            action = PMAction(**action_payload)
+                        except Exception:
+                            action = _pick_rule_action(result.observation)
 
-        state = env.state()
+                try:
+                    result = env.step(action)
+                    step_reward = result.reward
+                    rewards_history.append(step_reward)
+                    done_str = "true" if result.done else "false"
+                    action_str = f"{action.action_type}({action.task_id or ''})"
+                    print(f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error=null", flush=True)
+                    if result.done:
+                        break
+                except Exception as e:
+                    print(f"[STEP] step={step_idx + 1} action={action.action_type} reward=0.00 done=false error={str(e)}", flush=True)
+                    break
 
-    duration_s = round(time.time() - start, 3)
-    score = grade_for_task(task_id, state)
-    
-    success = state.project_completed and not state.project_failed
-    success_str = str(success).lower()
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
-    print(f"[END] success={success_str} steps={state.step_count} score={score:.2f} rewards={rewards_str}")
-    
+            state = env.state()
+
+        duration_s = round(time.time() - start, 3)
+        score = grade_for_task(task_id, state)
+        success = state.project_completed and not state.project_failed
+        steps_taken = state.step_count
+    except Exception as e:
+        duration_s = round(time.time() - start, 3)
+        print(f"[WARN] run_task_error={str(e)}", flush=True)
+
+    finally:
+        success_str = str(success).lower()
+        rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
+        print(f"[END] success={success_str} steps={steps_taken} score={score:.2f} rewards={rewards_str}", flush=True)
+
     return {
         "score": round(score, 4),
         "duration_s": duration_s,
-        "steps": float(state.step_count),
-        "progress": round(state.sprint_progress, 4),
+        "steps": float(steps_taken),
+        "progress": round(score, 4),
     }
 
 
