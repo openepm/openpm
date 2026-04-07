@@ -275,7 +275,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             state = env.state()
 
         duration_s = round(time.time() - start, 3)
-        score = grade_for_task(task_id, state)
+        score = float(grade_for_task(task_id, state))
         success = state.project_completed and not state.project_failed
         steps_taken = state.step_count
     except Exception as e:
@@ -283,7 +283,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
         print(f"[WARN] run_task_error={str(e)}", flush=True)
 
     finally:
-        score = max(0.01, min(0.99, score))
+        score = float(max(0.01, min(0.99, score)))
         success_str = str(success).lower()
         rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
         print(f"[END] success={success_str} steps={steps_taken} score={score:.2f} rewards={rewards_str}", flush=True)
