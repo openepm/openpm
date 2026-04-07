@@ -1,0 +1,566 @@
+
+Join Discord
+
+Help
+
+Log out
+
+Registration
+
+14th March - 3rd April
+
+Declaration
+
+Before R1
+
+Prepare
+
+Now - 25th March
+
+Round 1
+
+25th March - 8th April
+
+Results
+
+10th April
+
+Finale
+
+25th-26th April
+
+Welcome Divyansh Jha!
+
+jhadivyansh2003@gmail.com
+Copy
+
+Join the Discord Community
+
+All announcements, mentor access, and team matching happens here.
+
+
+Join Discord
+QUICK TOGGLe
+
+Team form Submission
+
+Preparatory Course
+
+Start Assessment
+
+FAQs
+
+step 1
+
+How will you compete?
+
+Choose solo or team before you can start the assessment
+
+Step 1 Complete
+You’ve joined Piyush Goel's team. The team has been finalized for you.
+
+👤
+Piyush Goel
+piyushgoel2808@gmail.com
+Team Lead
+👤
+Divyansh Jha
+jhadivyansh2003@gmail.com
+You
+🔒
+Team is finalized. You’re all set — no further action needed.
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp
+
+OpenEnv Round 1 Bootcamp: Build Your First RL Environment
+
+Live walkthrough to submit a strong Round 1 entry
+
+timing
+
+8:00 PM Onwards
+
+Wednesday, 1st April
+
+Host
+
+
+Ben Burtenshaw
+
+Community Education in AI at Hugging Face
+
+
+Pulkit Aneja
+
+Scaler Instructor
+
+Bootcamp starts in :
+
+01D 07H 06M 36S
+
+Join Live
+
+PROBLEM STATEMENT
+
+Round 1 — Problem Statement
+
+The Task
+
+Build a complete, real-world OpenEnv environment that an AI agent can learn from through the standard  step() / reset() / state()  API.
+
+Key Requirements at a Glance
+
+Must simulate a real-world task (not games or toys)
+
+Implement full OpenEnv spec: typed models, step()/reset()/state(), openenv.yaml
+
+Minimum 3 tasks with agent graders (easy → medium → hard, scores 0.0–1.0)
+
+Meaningful reward function with partial progress signals
+
+Baseline inference script with reproducible scores
+
+Deploy to Hugging Face Spaces + working Dockerfile
+
+README with environment description, action/observation spaces, setup instructions
+
+Detailed Requirements
+
+Evaluation Criteria
+
+How Judging works
+
+Pre-Submission Checklist  — all must pass or you're disqualified
+
+HF Space deploys
+
+Automated ping to the Space URL — must return 200 and respond to reset()
+
+OpenEnv spec compliance
+
+Validate openenv.yaml, typed models, step()/reset()/state() endpoints
+
+Dockerfile builds
+
+Automated docker build on the submitted repo
+
+Baseline reproduces
+
+Run the submitted inference script — must complete without error and produce scores
+
+3+ tasks with graders
+
+Enumerate tasks, run each grader, verify scores in 0.0–1.0 range
+
+Additional Instructions
+
+Before submitting, ensure the following variables are defined in your environment configuration:  
+
+API_BASE_URL   The API endpoint for the LLM.  
+
+MODEL_NAME     The model identifier to use for inference. 
+
+HF_TOKEN       Your Hugging Face / API key.
+
+The inference script must be named `inference.py` and placed in the root directory of the project
+
+Participants must use OpenAI Client for all LLM calls using above variables
+
+Infra Restrictions
+
+Runtime of inference script should be less than 20min 
+
+Make sure your env and inference can run on a machine with vcpu=2, memory=8gb
+
+Validator
+
+Run the pre-submission validation script before submitting
+
+Sample Inference Script
+
+"""
+        line = ACTION_PREFIX_RE.sub("", line)
+        match = ACTION_PATTERN.search(line)
+        if match:
+            action = match.group(0).strip()
+            # Collapse internal whitespace
+            action = re.sub(r"\s+", " ", action)
+            # If the model tried to click by natural-language description while we
+            # only exposed numeric BrowserGym IDs, fallback to the single detected ID.
+            return action
+
+    # Fall back to searching the whole response
+    match = ACTION_PATTERN.search(response_text)
+    if match:
+        action = match.group(0).strip()
+        action = re.sub(r"\s+", " ", action)
+        return action
+
+    return FALLBACK_ACTION
+
+
+def main() -> None:
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    env = BrowserGymEnv.from_docker_image(
+        image="browsergym-env:latest",
+        env_vars={
+            "BROWSERGYM_BENCHMARK": "miniwob",
+            "BROWSERGYM_TASK_NAME": "click-test",
+        },
+    )
+
+    history: List[str] = []
+
+    try:
+        result = env.reset()
+        observation = result.observation
+        print(f"Episode goal: {observation.goal}")
+
+        for step in range(1, MAX_STEPS + 1):
+            if result.done:
+                print("Environment signalled done. Stopping early.")
+                break
+
+            user_prompt = build_user_prompt(step, observation, history)
+            user_content = [{"type": "text", "text": user_prompt}]
+            screenshot_uri = extract_screenshot_uri(observation)
+            if screenshot_uri:
+                user_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": screenshot_uri},
+                    }
+                )
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": [{"type": "text", "text": SYSTEM_PROMPT}],
+                },
+                {
+                    "role": "user",
+                    "content": user_content,
+                },
+            ]
+
+            try:
+                completion = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=messages,
+                    temperature=TEMPERATURE,
+                    max_tokens=MAX_TOKENS,
+                    stream=False,
+                )
+                response_text = completion.choices[0].message.content or ""
+            # pylint: disable=broad-except
+            except Exception as exc:  # noqa: BLE001
+                failure_msg = f"Model request failed ({exc}). Using fallback action."
+                print(failure_msg)
+                response_text = FALLBACK_ACTION
+
+            action_str = parse_model_action(response_text)
+            print(f"Step {step}: model suggested -> {action_str}")
+
+            result = env.step(BrowserGymAction(action_str=action_str))
+            observation = result.observation
+
+            reward = result.reward or 0.0
+Pre Validation Script
+
+#!/usr/bin/env bash
+  hint "Check your network connection and that the Space is running."
+  hint "Try: curl -s -o /dev/null -w '%%{http_code}' -X POST $PING_URL/reset"
+  stop_at "Step 1"
+else
+  fail "HF Space /reset returned HTTP $HTTP_CODE (expected 200)"
+  hint "Make sure your Space is running and the URL is correct."
+  hint "Try opening $PING_URL in your browser first."
+  stop_at "Step 1"
+fi
+
+log "${BOLD}Step 2/3: Running docker build${NC} ..."
+
+if ! command -v docker &>/dev/null; then
+  fail "docker command not found"
+  hint "Install Docker: https://docs.docker.com/get-docker/"
+  stop_at "Step 2"
+fi
+
+if [ -f "$REPO_DIR/Dockerfile" ]; then
+  DOCKER_CONTEXT="$REPO_DIR"
+elif [ -f "$REPO_DIR/server/Dockerfile" ]; then
+  DOCKER_CONTEXT="$REPO_DIR/server"
+else
+  fail "No Dockerfile found in repo root or server/ directory"
+  stop_at "Step 2"
+fi
+
+log "  Found Dockerfile in $DOCKER_CONTEXT"
+
+BUILD_OK=false
+BUILD_OUTPUT=$(run_with_timeout "$DOCKER_BUILD_TIMEOUT" docker build "$DOCKER_CONTEXT" 2>&1) && BUILD_OK=true
+
+if [ "$BUILD_OK" = true ]; then
+  pass "Docker build succeeded"
+else
+  fail "Docker build failed (timeout=${DOCKER_BUILD_TIMEOUT}s)"
+  printf "%s\n" "$BUILD_OUTPUT" | tail -20
+  stop_at "Step 2"
+fi
+
+log "${BOLD}Step 3/3: Running openenv validate${NC} ..."
+
+if ! command -v openenv &>/dev/null; then
+  fail "openenv command not found"
+  hint "Install it: pip install openenv-core"
+  stop_at "Step 3"
+fi
+
+VALIDATE_OK=false
+VALIDATE_OUTPUT=$(cd "$REPO_DIR" && openenv validate 2>&1) && VALIDATE_OK=true
+
+if [ "$VALIDATE_OK" = true ]; then
+  pass "openenv validate passed"
+  [ -n "$VALIDATE_OUTPUT" ] && log "  $VALIDATE_OUTPUT"
+else
+  fail "openenv validate failed"
+  printf "%s\n" "$VALIDATE_OUTPUT"
+  stop_at "Step 3"
+fi
+
+printf "\n"
+printf "${BOLD}========================================${NC}\n"
+printf "${GREEN}${BOLD}  All 3/3 checks passed!${NC}\n"
+printf "${GREEN}${BOLD}  Your submission is ready to submit.${NC}\n"
+printf "${BOLD}========================================${NC}\n"
+printf "\n"
+
+exit 0
+Submission window opens on 28th March
+
+Deadline: 8 Apr 11:59 PM
+
+
+Submit your Assessment
+→
+Study material
+
+Preparatory Course
+
+4 modules · ~3.5 hours 
+
+Each module: read the README first, then open the notebook in Colab. No local setup needed.
+
+ Module 1: Why OpenEnv?
+
+ESSENTIAL FOR ROUND 1
+
+45 min
+
+Module 2: Using Existing Environments
+
+ESSENTIAL FOR ROUND 1
+
+50 min
+
+ Module 3: Deploying Environments
+
+ESSENTIAL FOR ROUND 1
+
+45 min
+
+Module 4: Building Your Own Environment
+
+ MOST IMPORTANT FOR ROUND 1
+
+60 min
+
+View full course repository
+
+GUIDE
+
+Round 1 Guide
+
+What to Expect
+
+Prerequisites
+
+How to Submit
+
+When Round 1 opens, you'll choose 1 of 4–5 problem statements and build an OpenEnv environment around it.
+
+Example of what a problem statement looks like
+
+"Build a mini-game RL environment with clearly defined tasks, automated graders, and reward logic using the OpenEnv framework."
+
+→ Create a mini-game an AI agent can play
+
+→ Define tasks with increasing difficulty
+
+→ Write graders that verify task completion
+
+→ Define reward logic for scoring
+
+→ Package using OpenEnv for automated evaluation
+
+Evaluation Criteria
+
+Runtime correctness
+
+Runs without errors
+
+Interface compliance
+
+Follows OpenEnv standard
+
+Task design
+
+ Clear, realistic, testable
+
+Grading logic
+
+ Reward system makes sense
+
+Step 2
+
+Submit your Assessment
+
+Complete Step 1 first
+
+Problem Statement is live. Build and submit.
+
+Round 1 begins 
+
+Submission window opens on 28th March
+
+Deadline: 8 Apr 11:59 PM
+
+
+Submit your Assessment
+→
+NOTE: Only team leaders can make the final submission.
+
+FAQs
+
+Frequently Asked Questions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Need help? Reach out to us
+
+help_openenvhackathon@scaler.com
+
+Contact Support
+
+submission Deadline: 8th April 11:59 PM
+
+
+Submit your Assessment
+→
+How to Submit?
+
+
+Chat between me and Piyush, where he shared some more texts sent by hackathon admins in Discord
+
+
+Piyush Goel
+17:30
+ou’re not using OpenAI (or any LLM) as an RL model itself.
+
+What you’re building is:
+👉 an environment (OpenEnv)
+👉 in which an agent can act, learn, and be evaluated
+
+So where does OpenAI come in?
+
+You can use it optionally for things like:
+
+Acting as the agent/decision-maker (instead of training an RL model from scratch)
+Generating actions based on state (LLM as a policy)
+Evaluating outputs or helping with grading/rewards
+Simulating real-world behavior (like users, systems, conversations)
+
+But:
+
+The core requirement is your environment design (state, actions, rewards, tasks)
+Not training a full RL model
+Not mandatory to use OpenAI at all
+
+Think of it like:
+
+You build the game (environment)
+The agent (LLM / rule-based / RL) just plays it
+
+So yes, OpenAI is just a tool you can use, not the main requirement.
+bhaskar raj — Yesterday at 4:57 PM
+We are aware that many of you are facing delays where your Spaces remain stuck in the “BUILDING” state for several hours (or longer), even after pushing your completed projects.
+
+We have already escalated this. We have shared a list of submitted Spaces that are currently stuck in the BUILDING state. This has now been further escalated to the Hugging Face support team. We are expecting an update from them today.
+
+We will keep you posted as soon as we hear back.
+
+Piyush Goel
+17:33
+Please note that the issue while loading https://openenv-echo-env.hf.space/ on chrome is fixed. 
+
+
+That space is up now.
+
+Here is the link: https://openenv-echo-env.hf.space/web/
+You can access the state API here: https://openenv-echo-env.hf.space/state 
+This link is also available now: https://huggingface.co/spaces/openenv/echo_env
+
+Piyush Goel
+17:41
+Guys, there is only one problem statement for Round 1, which is available on your dashboard. If you’re unable to see it, please scroll from the top, it should appear in the main section. There is no need to click any button to access it.
+
+Just to clarify again, the problem statement is open-ended. This means all participants are working under the same overall objective, but you are expected to define your own real-world use case within that scope and build your environment accordingly
+
+Piyush Goel
+17:47
+https://huggingface.co/organizations/openenv/activity/all
