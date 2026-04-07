@@ -6,7 +6,6 @@ colorTo: green
 sdk: docker
 pinned: false
 app_port: 8000
-base_path: /web
 tags:
   - openenv
 ---
@@ -25,8 +24,6 @@ tags:
 
   <h3>An enterprise-grade, deterministic Reinforcement Learning environment simulating complex software sprints.</h3>
 </div>
-
-
 
 ---
 
@@ -47,20 +44,22 @@ Try the interactive UI or deploy standard OpenEnv agents targeting the endpoint 
 ### Python Client Integration
 
 **Connect to the deployed Space via SDK:**
+
 ```python
 from openpm_env import OpenPMEnv, PMAction
 
 with OpenPMEnv.from_env("divyanshjha/openpm").sync() as env:
     result = env.reset(task_id="easy")
-    
+
     # Assign Developer D1 to Task T1
     action = PMAction(action_type="assign_task", task_id="T1", developer_id="D1")
     result = env.step(action)
-    
+
     print(f"Reward: {result.reward}, Done: {result.done}")
 ```
 
 **Connect to a local server:**
+
 ```python
 from openpm_env import OpenPMEnv, PMAction
 
@@ -72,23 +71,25 @@ with OpenPMEnv(base_url="http://localhost:8000").sync() as env:
 ### Setup/Docker Instructions
 
 To run the environment isolated via Docker locally:
+
 ```bash
 docker build -t openpm-env:latest .
 docker run -p 8000:8000 openpm-env:latest
 ```
+
 Once started, the environment API will be accessible on `http://localhost:8000`.
 
 ### Environment Variables Guide
 
 When running LLM inference (`inference.py`), ensure the following variables are configured in your environment:
 
-| Variable | Description | Default | Required? |
-| :--- | :--- | :--- | :--- |
-| `HF_TOKEN` | Hugging Face Access Token required for authenticating with Space endpoints and OpenEnv logic. | *(None)* | **Yes** |
-| `OPENAI_API_KEY` | Equivalent to `HF_TOKEN`, used strictly if executing the environment via OpenAI SDK proxy. | *(None)* | No |
-| `API_BASE_URL` | Endpoint to route OpenAI logic completions. | `http://localhost:8000/v1` | No |
-| `MODEL_NAME` | Desired LLM model identifier (e.g., `gpt-4`). | `gpt-4` | No |
-| `OPENPM_USE_OPENAI`| Set to `1` to toggle from rule-based AI to external LLM processing. | `0` | No |
+| Variable            | Description                                                                                   | Default                    | Required? |
+| :------------------ | :-------------------------------------------------------------------------------------------- | :------------------------- | :-------- |
+| `HF_TOKEN`          | Hugging Face Access Token required for authenticating with Space endpoints and OpenEnv logic. | _(None)_                   | **Yes**   |
+| `OPENAI_API_KEY`    | Equivalent to `HF_TOKEN`, used strictly if executing the environment via OpenAI SDK proxy.    | _(None)_                   | No        |
+| `API_BASE_URL`      | Endpoint to route OpenAI logic completions.                                                   | `http://localhost:8000/v1` | No        |
+| `MODEL_NAME`        | Desired LLM model identifier (e.g., `gpt-4`).                                                 | `gpt-4`                    | No        |
+| `OPENPM_USE_OPENAI` | Set to `1` to toggle from rule-based AI to external LLM processing.                           | `0`                        | No        |
 
 ## ⚙️ Core Mechanics (Schemas & Rules)
 
@@ -96,31 +97,31 @@ When running LLM inference (`inference.py`), ensure the following variables are 
 
 Agents manage the project via rigorous constraints. Notice the newly nerfed `request_help` mechanism designed to drain resources symmetrically.
 
-| Action Type | Required Target | Explanation |
-| :--- | :--- | :--- |
-| `assign_task` | `task_id`, `developer_id` | Allocate a developer whose skills optimally match the task domain. |
-| `reprioritize_task`| `task_id`, `priority` | Shift priority (`low` to `critical`) to accelerate development speed. |
-| `split_task` | `task_id` | Decompose high-effort workloads. |
-| `request_help` | `task_id`, `helper_developer_id` | **NERFED:** Resolves a blocked task but *requires an available developer* to sacrifice their time. Effectively creates a resource trade-off instead of a "magic unblock button". |
-| `delay_task` | `task_id` | Extend deadline (trading time for reduced blocker pressure). |
-| `mark_complete` | `task_id` | Commit the finished code to deployment. Fails if effort remains. |
+| Action Type         | Required Target                  | Explanation                                                                                                                                                                      |
+| :------------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assign_task`       | `task_id`, `developer_id`        | Allocate a developer whose skills optimally match the task domain.                                                                                                               |
+| `reprioritize_task` | `task_id`, `priority`            | Shift priority (`low` to `critical`) to accelerate development speed.                                                                                                            |
+| `split_task`        | `task_id`                        | Decompose high-effort workloads.                                                                                                                                                 |
+| `request_help`      | `task_id`, `helper_developer_id` | **NERFED:** Resolves a blocked task but _requires an available developer_ to sacrifice their time. Effectively creates a resource trade-off instead of a "magic unblock button". |
+| `delay_task`        | `task_id`                        | Extend deadline (trading time for reduced blocker pressure).                                                                                                                     |
+| `mark_complete`     | `task_id`                        | Commit the finished code to deployment. Fails if effort remains.                                                                                                                 |
 
 ### Dense Observation Space (`PMObservation`)
 
 The observation space strips away irrelevant noise to provide an information-dense snapshot strictly optimized for Large Language Model (LLM) context windows.
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `day` / `total_days` | `int` | Current progress against the absolute project timeline. |
-| `sprint_progress` | `float` | Effort completion ratio (`0.0` to `1.0`). |
-| `active_tasks` | `List[TaskSnapshot]` | Aggregated states (id, due date, remaining effort, deps). |
-| `blocked_tasks` | `List[str]` | IDs of tasks stuck waiting on dependencies or chaotic risks. |
-| `developer_availability`| `Dict[str, bool]` | Real-time map tracking which developers can take immediate work. |
-| `risk_level` | `float` | Synthesized system-wide hazard multiplier warning the agent. |
+| Field                    | Type                 | Description                                                      |
+| :----------------------- | :------------------- | :--------------------------------------------------------------- |
+| `day` / `total_days`     | `int`                | Current progress against the absolute project timeline.          |
+| `sprint_progress`        | `float`              | Effort completion ratio (`0.0` to `1.0`).                        |
+| `active_tasks`           | `List[TaskSnapshot]` | Aggregated states (id, due date, remaining effort, deps).        |
+| `blocked_tasks`          | `List[str]`          | IDs of tasks stuck waiting on dependencies or chaotic risks.     |
+| `developer_availability` | `Dict[str, bool]`    | Real-time map tracking which developers can take immediate work. |
+| `risk_level`             | `float`              | Synthesized system-wide hazard multiplier warning the agent.     |
 
 ## 💸 The Zero-Sum Reward Engine
 
-OpenPM utilizes an aggressive, zero-sum continuous reward matrix designed to deter brute forcing and reward hallucination. 
+OpenPM utilizes an aggressive, zero-sum continuous reward matrix designed to deter brute forcing and reward hallucination.
 
 - **Progress Rewards:** Given for valid reduction in `task.effort_remaining` based on correct domain-matching.
 - **Continuous Idle Penalties:** Agents bleed points for every turn there are unfinished tasks but unassigned developers. Every wasted dev cycle applies a recurring negative weight penalty.
@@ -131,7 +132,7 @@ OpenPM utilizes an aggressive, zero-sum continuous reward matrix designed to det
 
 OpenPM has undergone rigorous chaos testing and guarantees mathematical exploit-proof security against reinforcement hacking:
 
-- ✅ **100% Deterministic Framework:** The seemingly random chaotic stochastic risks are fully seed-bound. Executing identical actions across independent local resets generated cryptographically identical execution trajectories. 
+- ✅ **100% Deterministic Framework:** The seemingly random chaotic stochastic risks are fully seed-bound. Executing identical actions across independent local resets generated cryptographically identical execution trajectories.
 - ✅ **Magic Button Blocked:** Tested against the infamous "Magic Helper Exploit." Providing empty requests correctly dumps validation errors, while targeting busy helper devs triggers immediate validation failure without advancing state.
 - ✅ **Zero-Sum Drainage Proven:** Long-term idle actions securely collapse to deeply negative trailing rewards (`-0.899`), preventing agents from gaming duration.
 
@@ -139,12 +140,12 @@ OpenPM has undergone rigorous chaos testing and guarantees mathematical exploit-
 
 OpenPM is intentionally mapped to real enterprise planning practices rather than toy game mechanics.
 
-| OpenPM Mechanic | Real-World Parallel | Citation |
-| :--- | :--- | :--- |
-| Task dependency graphs and critical-path ordering | PMBOK-style schedule management and critical path planning | [PMI PMBOK Guide](https://www.pmi.org/standards/pmbok) |
-| Skill-aware developer assignment | SEI-style team capability modeling and staffing balance | [Software Engineering Institute](https://www.sei.cmu.edu/) |
-| Seeded blockers and stochastic delays | PMI risk register and mitigation workflow | [PMI Learning Library](https://www.pmi.org/learning/library) |
-| Idle developer penalties | Real resource underutilization and context-switch cost | [PMI Standards Overview](https://www.pmi.org/standards) |
+| OpenPM Mechanic                                   | Real-World Parallel                                        | Citation                                                     |
+| :------------------------------------------------ | :--------------------------------------------------------- | :----------------------------------------------------------- |
+| Task dependency graphs and critical-path ordering | PMBOK-style schedule management and critical path planning | [PMI PMBOK Guide](https://www.pmi.org/standards/pmbok)       |
+| Skill-aware developer assignment                  | SEI-style team capability modeling and staffing balance    | [Software Engineering Institute](https://www.sei.cmu.edu/)   |
+| Seeded blockers and stochastic delays             | PMI risk register and mitigation workflow                  | [PMI Learning Library](https://www.pmi.org/learning/library) |
+| Idle developer penalties                          | Real resource underutilization and context-switch cost     | [PMI Standards Overview](https://www.pmi.org/standards)      |
 
 ## 🧪 Enterprise Use Cases
 
@@ -160,10 +161,10 @@ OpenPM can be used to evaluate planning agents for:
 
 The latest benchmark run (`scripts/run_comprehensive_evals.py`) produced the following seed-42 comparison:
 
-| Agent | Easy | Medium | Hard |
-| :--- | ---: | ---: | ---: |
-| RandomAgent | 0.0767 | 0.0000 | 0.0000 |
-| GreedyAgent | 0.0874 | 0.0000 | 0.0000 |
+| Agent                  |   Easy | Medium |   Hard |
+| :--------------------- | -----: | -----: | -----: |
+| RandomAgent            | 0.0767 | 0.0000 | 0.0000 |
+| GreedyAgent            | 0.0874 | 0.0000 | 0.0000 |
 | AdvancedRuleBasedAgent | 1.0000 | 0.5900 | 0.0000 |
 
 This result is intentional by design and is the core benchmark signal:
@@ -173,5 +174,3 @@ This result is intentional by design and is the core benchmark signal:
 - Hard is built to require contextual, dynamic replanning at each step. This is the failure boundary where standard heuristics are filtered out and LLM-driven reasoning is required.
 
 OpenPM therefore functions as an LLM-Reasoning Benchmark, not just a generic PM simulator: Easy and Medium validate baseline planning competence, while Hard deliberately tests true adaptive AI planning capabilities under uncertainty.
-
-
