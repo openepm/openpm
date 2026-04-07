@@ -8,3 +8,5 @@ __pycache__/
 .env.*
 *.log
 .DS_Store
+systemInstruction.txt
+projectrules.txt
