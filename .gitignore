@@ -10,3 +10,4 @@ __pycache__/
 .DS_Store
 systemInstruction.txt
 projectrules.txt
+openpm_env.egg-info/
