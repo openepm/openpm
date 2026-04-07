@@ -6,7 +6,7 @@ from openpm_env.models import PMState, TaskSnapshot
 
 
 def _clamp01(value: float) -> float:
-    return max(0.001, min(0.999, value))
+    return max(0.01, min(0.99, value))
 
 
 def _count_completed(tasks: List[TaskSnapshot]) -> int:
