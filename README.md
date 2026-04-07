@@ -26,11 +26,7 @@ tags:
   <h3>An enterprise-grade, deterministic Reinforcement Learning environment simulating complex software sprints.</h3>
 </div>
 
-<div align="center">
 
-[![Watch the Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_VIDEO_ID)
-
-</div>
 
 ---
 

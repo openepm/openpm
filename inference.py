@@ -9,7 +9,9 @@ from contextlib import suppress
 from pathlib import Path
 from urllib.parse import urlparse
 from statistics import mean
-from typing import Dict, List
+from typing import Any, Dict, List
+
+import json
 
 from openai import OpenAI
 
@@ -184,36 +186,40 @@ def _pick_rule_action(observation) -> PMAction:
     return PMAction(action_type="mark_complete", task_id=tasks[0].task_id)
 
 
-def _pick_openai_action(observation, client: OpenAI) -> PMAction:
-    prompt = (
-        "You are a project manager agent in a deterministic sprint simulation. "
-        "Return one JSON object with keys: action_type, task_id, developer_id, priority. "
-        "Only use action_type from assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete. "
-        "Current observation: "
-        f"day={observation.day}, progress={observation.sprint_progress}, blocked={observation.blocked_tasks}, "
-        f"tasks={[(t.task_id, t.priority, t.status, t.assigned_to, t.effort_remaining, t.blocked) for t in observation.active_tasks]}, "
-        f"availability={observation.developer_availability}"
-    )
-
-    completion = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-        max_tokens=120,
-    )
-    content = completion.choices[0].message.content or "{}"
-
-    import json
-
+def _pick_openai_action(observation, client: OpenAI) -> Dict[str, Any]:
     try:
-        parsed = json.loads(content)
-    except json.JSONDecodeError:
-        return _pick_rule_action(observation)
+        prompt = (
+            "You are a project manager agent in a deterministic sprint simulation. "
+            "Return one JSON object with keys: action_type, task_id, developer_id, priority. "
+            "Only use action_type from assign_task, reprioritize_task, split_task, request_help, delay_task, mark_complete. "
+            "Current observation: "
+            f"day={observation.day}, progress={observation.sprint_progress}, blocked={observation.blocked_tasks}, "
+            f"tasks={[(t.task_id, t.priority, t.status, t.assigned_to, t.effort_remaining, t.blocked) for t in observation.active_tasks]}, "
+            f"availability={observation.developer_availability}"
+        )
 
-    try:
-        return PMAction(**parsed)
-    except Exception:
-        return _pick_rule_action(observation)
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=120,
+        )
+        content = completion.choices[0].message.content or "{}"
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"[WARN] openai_json_error={str(e)}")
+            return {"action_type": "invalid_fallback"}
+
+        if not isinstance(parsed, dict):
+            print("[WARN] openai_payload_error=non_dict_response")
+            return {"action_type": "invalid_fallback"}
+
+        return parsed
+    except Exception as e:
+        print(f"[WARN] openai_api_error={str(e)}")
+        return {"action_type": "invalid_fallback"}
 
 
 def run_task(task_id: str, base_url: str) -> Dict[str, float]:
@@ -240,7 +246,14 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             if openai_client is None:
                 action = _pick_rule_action(result.observation)
             else:
-                action = _pick_openai_action(result.observation, openai_client)
+                action_payload = _pick_openai_action(result.observation, openai_client)
+                if action_payload.get("action_type") == "invalid_fallback":
+                    action = PMAction(action_type="delay_task", task_id="__invalid_fallback__")
+                else:
+                    try:
+                        action = PMAction(**action_payload)
+                    except Exception:
+                        action = PMAction(action_type="delay_task", task_id="__invalid_fallback__")
             
             try:
                 result = env.step(action)
@@ -249,6 +262,8 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
                 done_str = "true" if result.done else "false"
                 action_str = f"{action.action_type}({action.task_id or ''})"
                 print(f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error=null")
+                if result.done:
+                    break
             except Exception as e:
                 print(f"[STEP] step={step_idx + 1} action={action.action_type} reward=0.00 done=false error={str(e)}")
                 break
@@ -258,9 +273,10 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
     duration_s = round(time.time() - start, 3)
     score = grade_for_task(task_id, state)
     
-    success_str = "true" if (state.project_completed and not state.project_failed) else "false"
+    success = state.project_completed and not state.project_failed
+    success_str = str(success).lower()
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
-    print(f"[END] success={success_str} steps={state.step_count} score={score:.2f} rewards={rewards_str}")
+    print(f"[END] success={success_str} steps={state.step_count} score={score:.4f} rewards={rewards_str}")
     
     return {
         "score": round(score, 4),

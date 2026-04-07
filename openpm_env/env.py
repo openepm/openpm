@@ -5,6 +5,7 @@ import random
 from typing import Any, Dict, Optional
 
 from openenv.core.env_server.interfaces import Environment
+from pydantic import ValidationError
 
 from openpm_env.graders import grade_for_task
 from openpm_env.models import (
@@ -51,7 +52,7 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
 
     def step(
         self,
-        action: PMAction,
+        action: PMAction | Dict[str, Any],
         timeout_s: Optional[float] = None,
         **kwargs: Any,
     ) -> PMObservation:
@@ -64,13 +65,26 @@ class OpenPMEnvironment(Environment[PMAction, PMObservation, PMState]):
         helped_blocker = False
         good_prioritization = False
 
-        validation_error = self._validate_action(action)
-        if validation_error:
+        parsed_action: PMAction | None = None
+        validation_error: Optional[str] = None
+
+        try:
+            if isinstance(action, PMAction):
+                parsed_action = action
+            else:
+                parsed_action = PMAction.model_validate(action)
+        except ValidationError:
+            validation_error = "action_validation_error"
+
+        if validation_error is None and parsed_action is not None:
+            validation_error = self._validate_action(parsed_action)
+
+        if validation_error is not None:
             invalid_action = True
             self._state.invalid_action_count += 1
             self._event_log.append(f"invalid:{validation_error}")
         else:
-            helped_blocker, good_prioritization = self._apply_action(action)
+            helped_blocker, good_prioritization = self._apply_action(parsed_action)
 
         self._state.step_count += 1
         self._state.day += 1
