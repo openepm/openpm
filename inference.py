@@ -248,13 +248,13 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             else:
                 action_payload = _pick_openai_action(result.observation, openai_client)
                 if action_payload.get("action_type") == "invalid_fallback":
-                    action = PMAction(action_type="delay_task", task_id="__invalid_fallback__")
+                    action = _pick_rule_action(result.observation)
                 else:
                     try:
                         action = PMAction(**action_payload)
                     except Exception:
-                        action = PMAction(action_type="delay_task", task_id="__invalid_fallback__")
-            
+                        action = _pick_rule_action(result.observation)
+
             try:
                 result = env.step(action)
                 step_reward = result.reward
