@@ -18,7 +18,7 @@ tags:
     <img src="https://img.shields.io/badge/OpenEnv-Compliant-success?style=for-the-badge&logo=shield" alt="OpenEnv Compliant" />
     <img src="https://img.shields.io/badge/Status-Live-22c55e?style=for-the-badge&logo=huggingface" alt="Status: Live" />
     <img src="https://img.shields.io/badge/License-MIT-0ea5e9?style=for-the-badge&logo=open-source-initiative" alt="License: MIT" />
-    <a href="https://huggingface.co/spaces/piyushgoel2808/openpm">
+    <a href="https://huggingface.co/spaces/divyanshjha/openpm">
       <img src="https://img.shields.io/badge/Play_on-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Play on Hugging Face" />
     </a>
   </p>
@@ -42,7 +42,7 @@ Most RL benchmarks focus on games or synthetic, low-stakes puzzles. OpenPM was e
 
 Try the interactive UI or deploy standard OpenEnv agents targeting the endpoint directly.
 
-**Live Hugging Face Space:** [https://huggingface.co/spaces/piyushgoel2808/openpm](https://huggingface.co/spaces/piyushgoel2808/openpm)
+**Live Hugging Face Space:** [https://huggingface.co/spaces/divyanshjha/openpm](https://huggingface.co/spaces/divyanshjha/openpm)
 
 ### Python Client Integration
 
@@ -50,7 +50,7 @@ Try the interactive UI or deploy standard OpenEnv agents targeting the endpoint 
 ```python
 from openpm_env import OpenPMEnv, PMAction
 
-with OpenPMEnv.from_env("piyushgoel2808/openpm").sync() as env:
+with OpenPMEnv.from_env("divyanshjha/openpm").sync() as env:
     result = env.reset(task_id="easy")
     
     # Assign Developer D1 to Task T1
@@ -129,7 +129,7 @@ OpenPM utilizes an aggressive, zero-sum continuous reward matrix designed to det
 
 ## 🛡️ Automated QA & Chaos Testing
 
-OpenPM has undergone rigorous chaos testing (see `TEST_RESULTS.md`) and guarantees mathematical exploit-proof security against reinforcement hacking:
+OpenPM has undergone rigorous chaos testing and guarantees mathematical exploit-proof security against reinforcement hacking:
 
 - ✅ **100% Deterministic Framework:** The seemingly random chaotic stochastic risks are fully seed-bound. Executing identical actions across independent local resets generated cryptographically identical execution trajectories. 
 - ✅ **Magic Button Blocked:** Tested against the infamous "Magic Helper Exploit." Providing empty requests correctly dumps validation errors, while targeting busy helper devs triggers immediate validation failure without advancing state.
@@ -174,6 +174,4 @@ This result is intentional by design and is the core benchmark signal:
 
 OpenPM therefore functions as an LLM-Reasoning Benchmark, not just a generic PM simulator: Easy and Medium validate baseline planning competence, while Hard deliberately tests true adaptive AI planning capabilities under uncertainty.
 
-## 📋 Validation Summary
 
-The full QA matrix, reproducibility table, and chaos-test notes are preserved in [TEST_RESULTS.md](TEST_RESULTS.md).

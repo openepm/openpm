@@ -1,2 +1,0 @@
-openpm_env
-server
