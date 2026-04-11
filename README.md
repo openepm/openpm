@@ -42,6 +42,8 @@ Try the interactive UI or deploy standard OpenEnv agents targeting the endpoint 
 
 **Live Hugging Face Space:** [https://huggingface.co/spaces/piyushgoel2808/openpm-finale](https://huggingface.co/spaces/piyushgoel2808/openpm-finale)
 
+**Source Repository:** [https://github.com/openepm/openpm](https://github.com/openepm/openpm)
+
 ### Python Client Integration
 
 **Connect to the deployed Space via SDK:**

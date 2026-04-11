@@ -3,7 +3,7 @@
 ## Summary
 
 - Date: 2026-04-10
-- Repository: https://github.com/piyushgoel2808/openpm-v3.git
+- Repository: https://github.com/openepm/openpm.git
 - Scope: strict stdout compliance audit, runtime/resource audit, and deterministic benchmark evidence.
 
 ## Validation Checklist
