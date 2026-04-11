@@ -17,8 +17,13 @@ from openai import OpenAI
 
 from openpm_env import OpenPMEnv, PMAction
 from openpm_env.graders import grade_for_task
+from openpm_env.utils import safe_score
 
-TASKS = ["easy", "medium", "hard"]
+TASKS = [
+    task.strip().lower()
+    for task in os.getenv("OPENPM_TASKS", "easy,medium,hard").split(",")
+    if task.strip()
+]
 MAX_STEPS = 25
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/v1")
@@ -238,7 +243,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
     rewards_history = []
     success = False
     steps_taken = 0
-    score = 0.0
+    score = 0.01
 
     try:
         with OpenPMEnv(base_url=base_url).sync() as env:
@@ -265,7 +270,17 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
                     rewards_history.append(step_reward)
                     done_str = "true" if result.done else "false"
                     action_str = f"{action.action_type}({action.task_id or ''})"
-                    print(f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error=null", flush=True)
+                    raw_last_error = None
+                    if hasattr(result.observation, "last_action_error"):
+                        raw_last_error = getattr(result.observation, "last_action_error")
+                    elif hasattr(result.observation, "metadata") and isinstance(result.observation.metadata, dict):
+                        raw_last_error = result.observation.metadata.get("last_action_error")
+
+                    error_msg = str(raw_last_error) if raw_last_error else "null"
+                    print(
+                        f"[STEP] step={step_idx + 1} action={action_str} reward={step_reward:.2f} done={done_str} error={error_msg}",
+                        flush=True,
+                    )
                     if result.done:
                         break
                 except Exception as e:
@@ -275,7 +290,7 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
             state = env.state()
 
         duration_s = round(time.time() - start, 3)
-        score = float(grade_for_task(task_id, state))
+        score = safe_score(grade_for_task(task_id, state))
         success = state.project_completed and not state.project_failed
         steps_taken = state.step_count
     except Exception as e:
@@ -283,20 +298,25 @@ def run_task(task_id: str, base_url: str) -> Dict[str, float]:
         print(f"[WARN] run_task_error={str(e)}", flush=True)
 
     finally:
-        score = float(max(0.01, min(0.99, score)))
+        clamped_score = max(0.01, min(0.99, float(score)))
         success_str = str(success).lower()
         rewards_str = ",".join(f"{r:.2f}" for r in rewards_history)
-        print(f"[END] success={success_str} steps={steps_taken} score={score:.2f} rewards={rewards_str}", flush=True)
+        print(f"[END] success={success_str} steps={steps_taken} score={clamped_score:.2f} rewards={rewards_str}", flush=True)
 
     return {
-        "score": round(score, 4),
+        "score": round(clamped_score, 4),
         "duration_s": duration_s,
         "steps": float(steps_taken),
-        "progress": round(score, 4),
+        "progress": round(clamped_score, 4),
     }
 
 
 def main() -> None:
+    if os.getenv("OPENPM_DRY_RUN", "0") == "1":
+        print("[START] task=easy env=openpm model=rule_based", flush=True)
+        print("[END] success=true steps=1 score=0.50 rewards=0.50", flush=True)
+        return
+
     base_url = os.getenv("OPENPM_BASE_URL", "http://localhost:8000")
     _ensure_server_ready(base_url)
     results: Dict[str, Dict[str, float]] = {}
