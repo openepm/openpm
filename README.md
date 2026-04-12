@@ -36,6 +36,25 @@ Most RL benchmarks focus on games or synthetic, low-stakes puzzles. OpenPM was e
 - ⚖️ **Strict Zero-Sum Rewards:** Agents are heavily penalized for invalid actions, resource idling, or ignoring blockers, requiring sophisticated prioritization instead of brute-force guessing.
 - 🎲 **Seeded Stochastic Risk:** Production is chaotic. OpenPM injects 100% deterministic, seed-based chaotic task failures and blockers that pressure agents into reactive reassignment and active risk mitigation.
 
+### What We Are Building
+
+OpenPM is a deterministic RL environment for software sprint execution. It models decisions real teams make every day: assignment, reprioritization, blocker handling, and deadline trade-offs.
+
+### Why This Problem
+
+Many RL benchmarks are synthetic. We chose sprint management because it is high-impact, dependency-constrained, multi-objective, and operationally realistic.
+
+### What Is Unique
+
+1. **Dependency-Aware Action Pressure:** blocked tasks cannot be brute-forced.
+2. **Zero-Sum Resource Economics:** invalid and idle behavior is continuously penalized.
+3. **Deterministic Chaos:** dynamic blockers create realistic disruption while preserving reproducibility.
+4. **Meaningful Difficulty Ramp:** easy/medium/hard differ by planning complexity, not only labels.
+
+### What We Aim To Achieve
+
+We want to evaluate operational competence, not pattern matching. OpenPM is designed to test whether an agent can behave like a delivery-oriented project manager under uncertainty and strict constraints.
+
 ## 🚀 Quick Start & Live Demo
 
 Try the interactive UI or deploy standard OpenEnv agents targeting the endpoint directly.
@@ -89,7 +108,6 @@ When running LLM inference (`inference.py`), ensure the following variables are 
 | Variable            | Description                                                                                   | Default                    | Required? |
 | :------------------ | :-------------------------------------------------------------------------------------------- | :------------------------- | :-------- |
 | `HF_TOKEN`          | Hugging Face Access Token required for authenticating with Space endpoints and OpenEnv logic. | _(None)_                   | **Yes**   |
-| `OPENAI_API_KEY`    | Equivalent to `HF_TOKEN`, used strictly if executing the environment via OpenAI SDK proxy.    | _(None)_                   | No        |
 | `API_BASE_URL`      | Endpoint to route OpenAI logic completions.                                                   | `http://localhost:8000/v1` | No        |
 | `MODEL_NAME`        | Desired LLM model identifier (e.g., `gpt-4`).                                                 | `gpt-4`                    | No        |
 | `OPENPM_USE_OPENAI` | Set to `1` to toggle from rule-based AI to external LLM processing.                           | `0`                        | No        |
@@ -166,14 +184,14 @@ The latest benchmark run (`scripts/run_comprehensive_evals.py`) produced the fol
 
 | Agent                  |   Easy | Medium |   Hard |
 | :--------------------- | -----: | -----: | -----: |
-| RandomAgent            | 0.0767 | 0.0000 | 0.0000 |
-| GreedyAgent            | 0.0874 | 0.0000 | 0.0000 |
-| AdvancedRuleBasedAgent | 1.0000 | 0.5900 | 0.0000 |
+| RandomAgent            | 0.0767 | 0.0100 | 0.0100 |
+| GreedyAgent            | 0.0874 | 0.0100 | 0.0100 |
+| AdvancedRuleBasedAgent | 0.9900 | 0.5900 | 0.0100 |
 
 This result is intentional by design and is the core benchmark signal:
 
-- The AdvancedRuleBasedAgent perfectly solves Easy (1.0000) and remains competitive on Medium (~0.55 to ~0.60), confirming that strong deterministic heuristics work on structured planning tiers.
-- The Hard 0.0000 score for algorithmic baselines is strictly intentional. Hard injects dynamic stochastic blockers and overlapping critical paths that exceed static topological sorting and fixed-priority heuristics.
+- The AdvancedRuleBasedAgent reaches the strict upper clamp on Easy (0.9900) and remains competitive on Medium (~0.55 to ~0.60), confirming that strong deterministic heuristics work on structured planning tiers.
+- The Hard 0.0100 floor behavior for algorithmic baselines is strictly intentional. Hard injects dynamic stochastic blockers and overlapping critical paths that exceed static topological sorting and fixed-priority heuristics.
 - Hard is built to require contextual, dynamic replanning at each step. This is the failure boundary where standard heuristics are filtered out and LLM-driven reasoning is required.
 
 OpenPM therefore functions as an LLM-Reasoning Benchmark, not just a generic PM simulator: Easy and Medium validate baseline planning competence, while Hard deliberately tests true adaptive AI planning capabilities under uncertainty.
@@ -220,7 +238,7 @@ Before every submission:
 2. Pause or stop all unnecessary Spaces to reduce queueing and throttling risk.
 3. Add required secrets in Space Settings -> Variables and secrets:
   - `HF_TOKEN`
-  - `OPENAI_API_KEY`
+  - (`API_BASE_URL` and `MODEL_NAME` are optional variables because defaults exist in `inference.py`)
 4. Re-submit only after logs show successful startup.
 
 ### 7) Reference Alignment
